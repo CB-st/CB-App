@@ -50,6 +50,7 @@ StoryJournal       ◄── PIN / mnemonic / steps (dev/test OK to log under gi
 | Session | `Core/Session/AppSession.cs` | Shell idle lock + unlock |
 | Local persist / market / wallets DB | `Core/Persist/*` | Home, Convert, recipients |
 | Product V1 mock/API contracts | `Core/V1/*` | Shell HTTP product API + streams |
+| Encrypted userdata pack (design + Core crypto + wire) | [`docs/USER_DATA_ENCRYPTION.md`](USER_DATA_ENCRYPTION.md), `Core/UserData/*` | Suites + `IUserDataClient` / in-memory / TCP loopback (53809); prefs sync migration follow-up |
 | Wallets / QR / address derive | `Core/Wallets/*` | Receive, Send, AddWallet |
 | Charts / Cora lines / POS NFC payload | `Core/Charts`, `Core/Cora`, `Core/Pos` | Shell charts + PosLab |
 | Unit tests | `CipherBank-app.Tests/**` | CI gate without device |
