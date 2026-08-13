@@ -39,7 +39,7 @@ public sealed class PlainJsonUserDataWireCodec : IUserDataWireCodec
         ArgumentException.ThrowIfNullOrWhiteSpace(messageType);
         ArgumentNullException.ThrowIfNull(payload);
 
-        var payloadNode = new JsonObject();
+        JsonObject payloadNode = new();
         foreach (KeyValuePair<string, string> kv in payload)
         {
             if (kv.Key.StartsWith("__", StringComparison.Ordinal))
@@ -51,7 +51,7 @@ public sealed class PlainJsonUserDataWireCodec : IUserDataWireCodec
         }
 
         long ts = _time.GetUtcNow().ToUnixTimeSeconds();
-        var root = new JsonObject
+        JsonObject root = new()
         {
             [UserDataWireNames.MessageType] = messageType,
             [UserDataWireNames.TimeStamp] = ts,

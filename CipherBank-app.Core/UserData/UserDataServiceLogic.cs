@@ -57,7 +57,7 @@ public sealed class UserDataServiceLogic
 
         string normalized = UserDataUsernameHash.NormalizeUsername(username);
         string hash = UserDataUsernameHash.HashHex(normalized);
-        var identity = new UserDataIdentityRecord(normalized, hash, publicKeyPem);
+        UserDataIdentityRecord identity = new(normalized, hash, publicKeyPem);
         return _store.TryAddIdentity(identity)
             ? new UserDataEnrollResult(UserDataStatusCode.Ok)
             : new UserDataEnrollResult(UserDataStatusCode.UsernameExists, "The requested username is already present.");
@@ -94,14 +94,14 @@ public sealed class UserDataServiceLogic
             CryptographicOperations.ZeroMemory(challenge);
             return new UserDataChallengeIssue(UserDataStatusCode.Ok, encrypted, expires, effective);
         }
-        catch (Exception ex)
+        catch (CryptographicException)
         {
             return new UserDataChallengeIssue(
                 UserDataStatusCode.CryptographicFailure,
                 null,
                 null,
                 null,
-                ex.Message);
+                "Challenge encryption failed.");
         }
     }
 

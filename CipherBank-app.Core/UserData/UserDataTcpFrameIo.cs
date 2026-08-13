@@ -14,7 +14,11 @@ public static class UserDataTcpFrameIo
     /// Reads UTF-8 until EOF marker; returns text without the marker.
     /// Use: High (TCP client/server). Scope: userdata transport.
     /// </summary>
-    public static async Task<string> ReadUntilEofAsync(NetworkStream stream, string eof, CancellationToken ct)
+    public static async Task<string> ReadUntilEofAsync(
+        NetworkStream stream,
+        string eof,
+        int maxFrameBytes,
+        CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(stream);
         if (string.IsNullOrEmpty(eof))
@@ -22,8 +26,11 @@ public static class UserDataTcpFrameIo
             throw new ArgumentException("EOF marker is required.", nameof(eof));
         }
 
-        var buffer = new byte[4096];
-        var sb = new StringBuilder();
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxFrameBytes);
+
+        byte[] buffer = new byte[4096];
+        StringBuilder sb = new();
+        int receivedBytes = 0;
         while (true)
         {
             ct.ThrowIfCancellationRequested();
@@ -31,6 +38,12 @@ public static class UserDataTcpFrameIo
             if (read == 0)
             {
                 throw new IOException("TCP connection closed before userdata EOF.");
+            }
+
+            receivedBytes = checked(receivedBytes + read);
+            if (receivedBytes > maxFrameBytes)
+            {
+                throw new InvalidDataException($"Userdata frame exceeds the {maxFrameBytes}-byte limit.");
             }
 
             sb.Append(Encoding.UTF8.GetString(buffer, 0, read));

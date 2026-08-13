@@ -19,18 +19,25 @@ public sealed class UserDataLoopbackServer : IAsyncDisposable
     private readonly UserDataServiceLogic _logic;
     private readonly PlainJsonUserDataWireCodec _codec;
     private readonly string _eof;
+    private readonly int _maxFrameBytes;
     private readonly CancellationTokenSource _cts = new();
     private Task? _acceptLoop;
 
     /// <summary>
     /// Binds 127.0.0.1:0 (ephemeral). Use: High (tests). Scope: process test harness.
     /// </summary>
-    public UserDataLoopbackServer(UserDataServiceLogic logic, string eof = UserDataEndpointOptions.DefaultEof)
+    public UserDataLoopbackServer(
+        UserDataServiceLogic logic,
+        string eof = UserDataEndpointOptions.DefaultEof,
+        int maxFrameBytes = UserDataEndpointOptions.DefaultMaxFrameBytes)
     {
         ArgumentNullException.ThrowIfNull(logic);
+        ArgumentException.ThrowIfNullOrEmpty(eof);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxFrameBytes);
         _logic = logic;
         _codec = new PlainJsonUserDataWireCodec();
         _eof = eof;
+        _maxFrameBytes = maxFrameBytes;
         _listener = new TcpListener(IPAddress.Loopback, 0);
     }
 
@@ -93,7 +100,7 @@ public sealed class UserDataLoopbackServer : IAsyncDisposable
                 return;
             }
 
-            _ = Task.Run(() => HandleClientAsync(client, ct), ct);
+            await HandleClientAsync(client, ct).ConfigureAwait(false);
         }
     }
 
@@ -106,7 +113,8 @@ public sealed class UserDataLoopbackServer : IAsyncDisposable
         try
         {
             await using NetworkStream stream = client.GetStream();
-            string requestText = await UserDataTcpFrameIo.ReadUntilEofAsync(stream, _eof, ct).ConfigureAwait(false);
+            string requestText = await UserDataTcpFrameIo.ReadUntilEofAsync(stream, _eof, _maxFrameBytes, ct)
+                .ConfigureAwait(false);
             UserDataApiFrame request = _codec.Decode(requestText);
             Dictionary<string, string> responsePayload = _logic.HandleRequest(request.MessageType, request.Payload);
 

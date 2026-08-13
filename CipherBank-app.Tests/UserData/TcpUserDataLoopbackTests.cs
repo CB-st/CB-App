@@ -16,14 +16,14 @@ public class TcpUserDataLoopbackTests
     [Fact]
     public async Task TcpClient_AgainstLoopbackServer_RoundTripsPackBlob()
     {
-        var store = new InMemoryUserDataStore();
-        var logic = new UserDataServiceLogic(store);
-        await using var server = new UserDataLoopbackServer(logic);
+        InMemoryUserDataStore store = new();
+        UserDataServiceLogic logic = new(store);
+        await using UserDataLoopbackServer server = new(logic);
         await server.StartAsync();
 
         IUserDataClient tcpClient = new UserDataClient(new TcpUserDataTransport(server.CreateClientOptions()));
         using UserDataKeyMaterial material = UserDataKeyDerivation.Derive(FixtureMnemonic);
-        var enrollAlgo = new RsaOaepSha256UserDataEnrollAlgorithm();
+        RsaOaepSha256UserDataEnrollAlgorithm enrollAlgo = new();
         using UserDataEnrollKeyPair keys = enrollAlgo.DeriveKeyPair(material.EnrollSeed);
 
         (await tcpClient.EnrollAsync("alice", keys.PublicKeyPem)).Code.Should().Be(UserDataStatusCode.Ok);
@@ -54,10 +54,10 @@ public class TcpUserDataLoopbackTests
     [Fact]
     public async Task MockAndTcp_ShareStore_CrossSubstantiate()
     {
-        var store = new InMemoryUserDataStore();
-        var logic = new UserDataServiceLogic(store);
+        InMemoryUserDataStore store = new();
+        UserDataServiceLogic logic = new(store);
         IUserDataClient mock = new MockUserDataClient(logic);
-        await using var server = new UserDataLoopbackServer(logic);
+        await using UserDataLoopbackServer server = new(logic);
         await server.StartAsync();
         IUserDataClient tcp = new UserDataClient(new TcpUserDataTransport(server.CreateClientOptions()));
 
@@ -76,5 +76,29 @@ public class TcpUserDataLoopbackTests
         UserDataEndpointOptions.Production().Port.Should().Be(53809);
         UserDataEndpointOptions.Production().Host.Should().Be("internal.cipherbank.money");
         UserDataEndpointOptions.Production().PayloadMode.Should().Be(UserDataPayloadMode.MasterKeyEncrypted);
+    }
+
+    [Fact]
+    public void ProductionTransport_WithoutMasterKeyCodec_FailsClosed()
+    {
+        Func<TcpUserDataTransport> create = () => new TcpUserDataTransport(UserDataEndpointOptions.Production());
+
+        create.Should().Throw<NotSupportedException>()
+            .WithMessage("*CB_MASTER_KEY*");
+    }
+
+    [Fact]
+    public void Transport_WithUnboundedFrameConfiguration_IsRejected()
+    {
+        UserDataEndpointOptions options = new()
+        {
+            Host = "127.0.0.1",
+            Port = 53809,
+            MaxFrameBytes = 0,
+        };
+
+        Func<TcpUserDataTransport> create = () => new TcpUserDataTransport(options);
+
+        create.Should().Throw<ArgumentOutOfRangeException>();
     }
 }

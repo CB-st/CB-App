@@ -18,7 +18,7 @@ public class MockUserDataClientTests
     {
         IUserDataClient client = new MockUserDataClient();
         using UserDataKeyMaterial material = UserDataKeyDerivation.Derive(FixtureMnemonic);
-        var enrollAlgo = new RsaOaepSha256UserDataEnrollAlgorithm();
+        RsaOaepSha256UserDataEnrollAlgorithm enrollAlgo = new();
         using UserDataEnrollKeyPair keys = enrollAlgo.DeriveKeyPair(material.EnrollSeed);
 
         UserDataEnrollResult enroll = await client.EnrollAsync("alice", keys.PublicKeyPem);

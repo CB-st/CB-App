@@ -13,6 +13,7 @@ public sealed class UserDataEndpointOptions
     public const string DefaultProductionHost = "internal.cipherbank.money";
     public const int DefaultPort = 53809;
     public const string DefaultEof = "\r\n\r\n";
+    public const int DefaultMaxFrameBytes = 1024 * 1024;
 
     public string Host { get; init; } = DefaultProductionHost;
 
@@ -23,6 +24,9 @@ public sealed class UserDataEndpointOptions
     public TimeSpan ConnectTimeout { get; init; } = TimeSpan.FromSeconds(10);
 
     public TimeSpan IoTimeout { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>Maximum accepted UTF-8 frame size, in bytes, including the EOF marker.</summary>
+    public int MaxFrameBytes { get; init; } = DefaultMaxFrameBytes;
 
     public UserDataPayloadMode PayloadMode { get; init; } = UserDataPayloadMode.PlainJson;
 
