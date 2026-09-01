@@ -2,7 +2,6 @@
 // Copyright (c) CipherBank. All rights reserved.
 // </copyright>
 
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 

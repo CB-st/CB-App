@@ -23,7 +23,8 @@ public sealed class UserDataServiceLogic
     private readonly int _challengeTtlSeconds;
 
     /// <summary>
-    /// Builds service logic over a shared store. Use: Low (composition). Scope: userdata Core.
+    /// Initializes a new instance of the <see cref="UserDataServiceLogic"/> class over a shared store.
+    /// Use: Low (composition). Scope: userdata Core.
     /// </summary>
     public UserDataServiceLogic(
         InMemoryUserDataStore store,

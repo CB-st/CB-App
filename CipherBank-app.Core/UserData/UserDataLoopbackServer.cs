@@ -24,7 +24,8 @@ public sealed class UserDataLoopbackServer : IAsyncDisposable
     private Task? _acceptLoop;
 
     /// <summary>
-    /// Binds 127.0.0.1:0 (ephemeral). Use: High (tests). Scope: process test harness.
+    /// Initializes a new instance of the <see cref="UserDataLoopbackServer"/> class bound to 127.0.0.1:0.
+    /// Use: High (tests). Scope: process test harness.
     /// </summary>
     public UserDataLoopbackServer(
         UserDataServiceLogic logic,

@@ -12,7 +12,8 @@ public sealed class UserDataClient : IUserDataClient
     private readonly IUserDataTransport _transport;
 
     /// <summary>
-    /// Wraps a transport. Use: Medium (DI). Scope: userdata Core.
+    /// Initializes a new instance of the <see cref="UserDataClient"/> class wrapping a transport.
+    /// Use: Medium (DI). Scope: userdata Core.
     /// </summary>
     public UserDataClient(IUserDataTransport transport)
     {

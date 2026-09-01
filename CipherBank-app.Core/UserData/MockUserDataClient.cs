@@ -10,7 +10,8 @@ public sealed class MockUserDataClient : IUserDataClient
     private readonly UserDataServiceLogic _logic;
 
     /// <summary>
-    /// Creates a mock with a fresh store. Use: High (unit tests). Scope: test composition.
+    /// Initializes a new instance of the <see cref="MockUserDataClient"/> class with a fresh store.
+    /// Use: High (unit tests). Scope: test composition.
     /// </summary>
     public MockUserDataClient()
         : this(new UserDataServiceLogic(new InMemoryUserDataStore()))
@@ -18,7 +19,8 @@ public sealed class MockUserDataClient : IUserDataClient
     }
 
     /// <summary>
-    /// Shares a store with a loopback server for cross-substantiation. Use: Medium. Scope: tests.
+    /// Initializes a new instance of the <see cref="MockUserDataClient"/> class that shares a store
+    /// with a loopback server for cross-substantiation. Use: Medium. Scope: tests.
     /// </summary>
     public MockUserDataClient(UserDataServiceLogic logic)
     {

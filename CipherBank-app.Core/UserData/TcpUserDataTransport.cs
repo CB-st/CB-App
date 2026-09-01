@@ -17,7 +17,8 @@ public sealed class TcpUserDataTransport : IUserDataTransport
     private readonly IUserDataWireCodec _codec;
 
     /// <summary>
-    /// Builds a TCP transport for the given endpoint. Use: Medium (DI / tests). Scope: userdata Core.
+    /// Initializes a new instance of the <see cref="TcpUserDataTransport"/> class for the given endpoint.
+    /// Use: Medium (DI / tests). Scope: userdata Core.
     /// </summary>
     public TcpUserDataTransport(UserDataEndpointOptions options, IUserDataWireCodec? codec = null)
     {
