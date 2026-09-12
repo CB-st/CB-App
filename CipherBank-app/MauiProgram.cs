@@ -182,7 +182,8 @@ public static class MauiProgram
                     catalog.SetActive(ChallengePassServiceCollectionExtensions.SuiteA1Id);
                     return sp.GetRequiredService<ChallengePassSessionProofBuilder>();
                 default:
-                    return sp.GetRequiredService<LabSessionProofBuilder>();
+                    throw new InvalidOperationException(
+                        "MAUI host requires SessionProofMode ChallengePass A1 or A2. Lab proofs stay on Core test DI; they are not a shipping default.");
             }
         });
         mauiAppBuilder.Services.AddSingleton<InMemoryProductClient>();
