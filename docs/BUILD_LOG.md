@@ -128,7 +128,7 @@ Later waves (market, wallets, fund, pay, cards) remain vertical-slice work: Auto
 
 **Kept (operational):** `docs/README.md`, `architecture.md`, `app/`, `core/`, `config/`, `tests/`, function refs, this `BUILD_LOG.md`, `AGENTS.md`.
 
-**Historical plans retained** under `docs/superpowers/plans/` (Stage 1 mechanical / Phase 4 ratchet notes) for audit; operational truth lives in this BUILD_LOG + `AGENTS.md`. Spent SDD/spec trees and Expo handoff remain out of the MAUI merge path.
+**Historical plans removed** — the spent `docs/superpowers/` plan/spec notes were dropped from the product tree (they remain in git history); operational truth lives in this BUILD_LOG + `AGENTS.md`. Spent SDD/spec trees and Expo handoff remain out of the MAUI merge path.
 
 ---
 

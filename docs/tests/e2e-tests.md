@@ -124,9 +124,4 @@ Page objects use `By.Id()` which maps to `AutomationId` in MAUI. All interactive
 | PosLabPage | PosStartSessionButton, PosSimulateButton |
 | ProfilePage | ProfileChangePinButton, ProfileLockButton, ProfileBackupPasswordEntry, ProfileBackupPasswordConfirmEntry, ProfileBackupHintEntry, ProfileExportBackupButton, ProfileRevealPinEntry, ProfileRevealMnemonicButton, ProfileMnemonicRevealLabel |
 | RestoreBackupPage | RestoreBackupPickFileButton, RestoreBackupFileStatusLabel, RestoreBackupPasswordEntry, RestoreBackupOpenButton, RestoreBackupErrorLabel |
-| LoginPage (legacy) | UsernameEntry, PasswordEntry, LoginButton, ErrorLabel |
-| DashboardPage (legacy) | WelcomeLabel, TotalBalanceLabel, WalletButton, PurchaseButton, RefreshButton, ErrorLabel, RecentTransactionsList |
-| WalletPage (legacy) | WalletBalanceLabel, WalletAddressLabel, RecipientAddressEntry, SendAmountEntry, SendButton, TransactionHistoryList, ErrorLabel |
-| PurchasePage (legacy) | CryptoSelector, AmountEntry, PurchaseButton, FeeLabel, ErrorLabel |
-
 When adding new UI elements used by E2E flows, add the corresponding `AutomationId` and update PageObjects.
