@@ -12,22 +12,35 @@ public sealed class SyncJobScheduler : ISyncJobScheduler
     private readonly object _gate = new();
     private readonly PriorityQueue<QueuedJob, (int Priority, long Sequence)> _queue = new();
     private readonly HashSet<string> _queuedKeys = new(StringComparer.Ordinal);
-    private readonly HashSet<string> _inFlightKeys = new(StringComparer.Ordinal);
-    private readonly TaskScheduler _taskScheduler;
+    private readonly Dictionary<string, Task> _activeJobs = new(StringComparer.Ordinal);
+    private readonly TaskFactory _taskFactory;
     private readonly int _maxConcurrency;
     private long _sequence;
-    private int _running;
-    private TaskCompletionSource? _idleSignal;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SyncJobScheduler"/> class over
+    /// <see cref="TaskScheduler.Default"/> with default options.
+    /// Use: Medium (tests). Scope: persist.
+    /// </summary>
     public SyncJobScheduler()
         : this(TaskScheduler.Default, new SyncSchedulerOptions())
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SyncJobScheduler"/> class over an injected
+    /// platform <see cref="TaskScheduler"/>.
+    /// Use: Medium (host DI / tests). Scope: persist.
+    /// </summary>
     public SyncJobScheduler(TaskScheduler taskScheduler, SyncSchedulerOptions options)
     {
-        _taskScheduler = taskScheduler ?? throw new ArgumentNullException(nameof(taskScheduler));
+        ArgumentNullException.ThrowIfNull(taskScheduler);
         ArgumentNullException.ThrowIfNull(options);
+        _taskFactory = new TaskFactory(
+            CancellationToken.None,
+            TaskCreationOptions.DenyChildAttach,
+            TaskContinuationOptions.None,
+            taskScheduler);
         _maxConcurrency = options.Resolve();
     }
 
@@ -39,122 +52,109 @@ public sealed class SyncJobScheduler : ISyncJobScheduler
 
         lock (_gate)
         {
-            if (_inFlightKeys.Contains(key) || _queuedKeys.Contains(key))
+            if (_activeJobs.ContainsKey(key) || _queuedKeys.Contains(key))
             {
                 return;
             }
 
-            long sequence = ++_sequence;
-            _queue.Enqueue(new QueuedJob(key, work), ((int)priority, sequence));
+            _queue.Enqueue(new QueuedJob(key, work), ((int)priority, ++_sequence));
             _queuedKeys.Add(key);
+            DispatchEligibleLocked();
         }
-
-        Pump();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Waits until the factory has no running or queued jobs, via <see cref="Task.WhenAll(Task[])"/>
+    /// over the tracked job tasks. Not part of <see cref="ISyncJobScheduler"/> — tests and shutdown
+    /// paths hold the concrete type.
+    /// Use: Low (tests / shutdown). Scope: SyncJobScheduler instance.
+    /// </summary>
     public async Task DrainAsync(CancellationToken ct)
     {
         while (true)
         {
-            Task waitTask;
+            Task[] active;
             lock (_gate)
             {
-                if (_running == 0 && _queue.Count == 0)
+                if (_activeJobs.Count == 0 && _queue.Count == 0)
                 {
                     return;
                 }
 
-                _idleSignal ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                waitTask = _idleSignal.Task;
+                active = [.. _activeJobs.Values];
             }
 
-            await waitTask.WaitAsync(ct).ConfigureAwait(false);
+            await Task.WhenAll(active).WaitAsync(ct).ConfigureAwait(false);
         }
     }
 
     /// <summary>
-    /// Starts as many eligible jobs as concurrency allows.
+    /// Starts queued jobs through the task factory while whole-job capacity remains.
+    /// Caller holds the gate.
     /// Use: High (after each enqueue / completion). Scope: SyncJobScheduler instance.
     /// </summary>
-    private void Pump()
+    private void DispatchEligibleLocked()
     {
-        while (true)
+        while (_activeJobs.Count < _maxConcurrency && _queue.Count > 0)
         {
-            QueuedJob job;
-            lock (_gate)
-            {
-                if (_running >= _maxConcurrency || _queue.Count == 0)
-                {
-                    return;
-                }
+            QueuedJob job = _queue.Dequeue();
+            _queuedKeys.Remove(job.Key);
 
-                job = _queue.Dequeue();
-                _queuedKeys.Remove(job.Key);
-                _running++;
-                _inFlightKeys.Add(job.Key);
-            }
+            Task run = _taskFactory.StartNew(job.InvokeAsync).Unwrap();
 
-            _ = Task.Factory.StartNew(
-                    static state =>
-                    {
-                        DispatchState dispatch = (DispatchState)state!;
-                        return dispatch.Owner.RunJobAsync(dispatch.Job);
-                    },
-                    new DispatchState(this, job),
-                    CancellationToken.None,
-                    TaskCreationOptions.DenyChildAttach,
-                    _taskScheduler)
-                .Unwrap();
+            // Continuation is queued (not synchronous) so completion cannot re-enter the
+            // gate held by this dispatch loop; the tracked task completes only after the
+            // key is released, which keeps DrainAsync honest.
+            Task tracked = run.ContinueWith(
+                _ => OnJobCompleted(job.Key),
+                CancellationToken.None,
+                TaskContinuationOptions.None,
+                TaskScheduler.Default);
+            _activeJobs[job.Key] = tracked;
         }
     }
 
     /// <summary>
-    /// Runs one job then pumps the next eligible work.
-    /// Use: High (per enqueued job). Scope: SyncJobScheduler instance.
+    /// Releases a completed job's key and dispatches the next eligible work.
+    /// Use: High (per job). Scope: SyncJobScheduler instance.
     /// </summary>
-    private async Task RunJobAsync(QueuedJob job)
+    private void OnJobCompleted(string key)
     {
-        try
+        lock (_gate)
         {
-            await job.Work(CancellationToken.None).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            // Jobs own their errors.
-        }
-        catch (ObjectDisposedException)
-        {
-            // Jobs own their errors.
-        }
-        catch (InvalidOperationException)
-        {
-            // Jobs own their errors.
-        }
-        catch (IOException)
-        {
-            // Jobs own their errors.
-        }
-        finally
-        {
-            lock (_gate)
-            {
-                _running--;
-                _inFlightKeys.Remove(job.Key);
-                if (_running == 0 && _queue.Count == 0)
-                {
-                    _idleSignal?.TrySetResult();
-                    _idleSignal = null;
-                }
-            }
-
-            Pump();
+            _activeJobs.Remove(key);
+            DispatchEligibleLocked();
         }
     }
 
-    private sealed record QueuedJob(
-        string Key,
-        Func<CancellationToken, Task> Work);
-
-    private sealed record DispatchState(SyncJobScheduler Owner, QueuedJob Job);
+    private sealed record QueuedJob(string Key, Func<CancellationToken, Task> Work)
+    {
+        /// <summary>
+        /// Runs the job body; jobs own their errors, so expected failure shapes are observed here.
+        /// Use: High (per job). Scope: SyncJobScheduler dispatch.
+        /// </summary>
+        public async Task InvokeAsync()
+        {
+            try
+            {
+                await Work(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Jobs own their errors.
+            }
+            catch (ObjectDisposedException)
+            {
+                // Jobs own their errors.
+            }
+            catch (InvalidOperationException)
+            {
+                // Jobs own their errors.
+            }
+            catch (IOException)
+            {
+                // Jobs own their errors.
+            }
+        }
+    }
 }
