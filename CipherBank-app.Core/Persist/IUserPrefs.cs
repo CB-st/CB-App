@@ -12,14 +12,19 @@ namespace CipherBank_app.Persist;
 /// </summary>
 public interface IUserPrefs
 {
+    /// <summary>Gets the ordered Home section keys (e.g. <c>holdings</c>, <c>rates</c>).</summary>
     Collection<string> HomeOrder { get; }
 
+    /// <summary>Gets per-section Home visibility keyed by the same section keys as <see cref="HomeOrder"/>.</summary>
     Dictionary<string, bool> HomeVisible { get; }
 
+    /// <summary>Gets the asset symbols the user enabled for display (uppercase, e.g. <c>BTC</c>).</summary>
     Collection<string> EnabledCurrencies { get; }
 
+    /// <summary>Gets or sets the idle seconds before the session locks. Zero or negative means the host default.</summary>
     int LockIdleSeconds { get; set; }
 
+    /// <summary>Gets or sets the appearance mode: <c>system</c>, <c>light</c>, or <c>dark</c>.</summary>
     string Appearance { get; set; }
 
     /// <summary>

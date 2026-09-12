@@ -395,7 +395,7 @@ Live PriceCache host (`api.cipherbank.money`). Impl: `PublicApiClient` / `MockPu
 ### `INVOKE IStreamService.ConnectAsync(token?)` / `DisconnectAsync`
 
 **Live:** `ClientWebSocketStreamService` — **always DisconnectAsync first** (tears down prior socket), then WSS connect + receive; parse `{ TYPE, PAYLOAD }`.  
-**Mock:** `MockStreamService` — synthetic `RATE.TICK` / `balance.update`.
+**Mock:** `InMemoryStreamService` — synthetic `RATE.TICK` / `balance.update`.
 
 ### `INVOKE StreamHub.Start` / `Stop`
 
@@ -562,7 +562,7 @@ Payload is **token reference only** — never PAN.
 | `ISessionProofBuilder` | Lab / A1 / A2 from `SessionProofMode` |
 | `IProductClient` | `HttpProductClient` / `InMemoryProductClient` |
 | `IPublicQuoteService` | `PublicApiClient` / `MockPublicQuoteService` |
-| `IStreamService` | WSS / `MockStreamService` |
+| `IStreamService` | WSS / `InMemoryStreamService` |
 | `IAppSession` | `AppSession` |
 | Challenge clients | HTTP or in-memory |
 | `IPqChannel` | `PqSymmetricChannel` (cleared on lock) |

@@ -46,6 +46,5 @@ dotnet build CipherBank-app/CipherBank-app.csproj -f net10.0-android
 | [tests/e2e-local.env.example](tests/e2e-local.env.example) | Gitignored local E2E credential template |
 | [config/README.md](config/README.md) | Build, analyzer, and tooling configuration |
 | [config/sonar/README.md](config/sonar/README.md) | Sonar quality-gate policy and local SonarQube-for-IDE setup |
-| [review/m1a-comment-resolution.md](review/m1a-comment-resolution.md) | M1a PR #25 feedback map |
 
 Reusable scaffolds are indexed in [../templates/README.md](../templates/README.md).

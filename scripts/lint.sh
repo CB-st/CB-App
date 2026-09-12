@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Org-ready local lint dispatcher (C# / shell / Python / C++ / Make).
+# Local lint dispatcher (C# / shell) — the languages this repo actually contains.
 # Auto-detects languages with sources; skips the rest.
 #
 # Usage:
@@ -32,7 +32,7 @@ for arg in "$@"; do
       sed -n '2,16p' "$0"
       exit 0
       ;;
-    csharp|shell|python|cpp|make)
+    csharp|shell)
       langs+=("$arg")
       ;;
     *)
@@ -55,17 +55,6 @@ detect_langs() {
   fi
   if cb_lint_has_any "$ROOT" '*.sh'; then
     out+=(shell)
-  fi
-  if cb_lint_has_any "$ROOT" '*.py'; then
-    out+=(python)
-  fi
-  if cb_lint_has_any "$ROOT" '*.c' '*.cc' '*.cpp' '*.cxx' '*.h' '*.hpp' '*.hxx' \
-    || [[ -f "$ROOT/CMakeLists.txt" ]]; then
-    out+=(cpp)
-  fi
-  if cb_lint_has_any "$ROOT" 'Makefile' 'makefile' 'GNUmakefile' '*.mk' \
-    || [[ -f "$ROOT/Makefile" ]]; then
-    out+=(make)
   fi
   printf '%s\n' "${out[@]}"
 }
@@ -96,15 +85,6 @@ for lang in "${langs[@]}"; do
       ;;
     shell)
       if ! "$ROOT/scripts/lint-shell.sh"; then fail=1; fi
-      ;;
-    python)
-      if ! "$ROOT/scripts/lint-python.sh"; then fail=1; fi
-      ;;
-    cpp)
-      if ! "$ROOT/scripts/lint-cpp.sh"; then fail=1; fi
-      ;;
-    make)
-      if ! "$ROOT/scripts/lint-make.sh"; then fail=1; fi
       ;;
   esac
   echo

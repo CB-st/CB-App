@@ -1,11 +1,11 @@
-// <copyright file="MockStreamService.cs" company="CipherBank">
+// <copyright file="InMemoryStreamService.cs" company="CipherBank">
 // Copyright (c) CipherBank. Licensed under the BSD 3-Clause License.
 // </copyright>
 
 namespace CipherBank_app.V1;
 
-/// <summary>Mock in-process stream that ticks rates periodically.</summary>
-public sealed class MockStreamService : IStreamService, IAsyncDisposable
+/// <summary>In-memory in-process stream that ticks rates periodically (lab/dev stand-in for the wire stream).</summary>
+public sealed class InMemoryStreamService : IStreamService, IAsyncDisposable
 {
     // --- Tick cadence (only fires when subscribers exist) ---
     private const int BalanceUpdateEveryNthSecond = 2;
@@ -15,12 +15,12 @@ public sealed class MockStreamService : IStreamService, IAsyncDisposable
     private CancellationTokenSource? _cts;
     private Task? _loop;
 
-    public MockStreamService()
+    public InMemoryStreamService()
         : this(TimeProvider.System)
     {
     }
 
-    public MockStreamService(TimeProvider timeProvider)
+    public InMemoryStreamService(TimeProvider timeProvider)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -68,7 +68,7 @@ public sealed class MockStreamService : IStreamService, IAsyncDisposable
 
     /// <summary>
     /// Cancels the tick loop and awaits it, swallowing expected cancel/dispose faults.
-    /// Use: Medium (disconnect / dispose). Scope: MockStreamService session.
+    /// Use: Medium (disconnect / dispose). Scope: InMemoryStreamService session.
     /// </summary>
     public async Task DisconnectAsync()
     {

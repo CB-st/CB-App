@@ -314,9 +314,9 @@ jobs:
           # interfaces (S4136-adjacent duplicates that are not real copy-paste debt).
           # Do NOT exclude PrefsWireDto / RateLimiter / MockProductApi.
           # Do NOT exclude CipherBank-app.Core/Persist/Migrations (EF migrate path is in scope).
-          # sonar.coverage.exclusions is FROZEN. Do not add entries. Cover product code
-          # instead; config/sonar/exclusions.json is the dedicated list and
-          # SonarCoverageExclusionTests locks sonar.yml to that file.
+          # These two exclusion lists below are the single source of truth (policy in
+          # config/sonar/README.md). sonar.coverage.exclusions is FROZEN: do not add
+          # entries; cover product code instead. Shrink only with an explicit policy change.
           dotnet sonarscanner begin \
             /k:"${SONAR_PROJECT_KEY}" \
             /n:"CipherBank App" \
