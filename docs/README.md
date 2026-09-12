@@ -47,6 +47,5 @@ dotnet build CipherBank-app/CipherBank-app.csproj -f net10.0-android
 | [config/README.md](config/README.md) | Build, analyzer, and tooling configuration |
 | [config/sonar/README.md](config/sonar/README.md) | Sonar quality-gate policy and local SonarQube-for-IDE setup |
 | [review/m1a-comment-resolution.md](review/m1a-comment-resolution.md) | M1a PR #25 feedback map |
-| [review/m2-alignment-resolution.md](review/m2-alignment-resolution.md) | M2 PR #21 and M1a forward-port map |
 
 Reusable scaffolds are indexed in [../templates/README.md](../templates/README.md).
