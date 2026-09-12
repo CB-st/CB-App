@@ -104,6 +104,6 @@ Static factory. Returns platform-specific handler:
 |------|------------|-------------|
 | InMemoryProductClient | IProductClient | DEBUG product stand-in |
 | InMemoryPublicQuoteService | IPublicQuoteService | DEBUG public quotes |
-| MockStreamService | IStreamService | DEBUG stream hub |
+| InMemoryStreamService | IStreamService | DEBUG stream hub |
 
 Mocks are used in DEBUG builds only (`#if DEBUG`).
