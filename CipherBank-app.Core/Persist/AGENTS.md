@@ -41,10 +41,14 @@ override CI Sonar: new issues on Persist code still fail the gate.
   `UserPrefs` so System.Text.Json can materialize the bag.
 - `SyncSchedulerOptions.MaxConcurrency` default `0` means unset.
   `Resolve()` is `Clamp(Ceiling(ProcessorCount / 2.0), 1, 8)`.
-  `SyncJobScheduler` uses `Resolve()`, encapsulates an injected
-  `TaskScheduler`, and does not inherit `TaskScheduler` or use
-  `ThreadPriority` (named keys, skip-duplicates, P1-before-P2 among waiting
-  work, and `DrainAsync` are not those APIs).
+  `SyncJobScheduler` is a deduping task factory: a `TaskFactory` bound to the
+  injected platform `TaskScheduler` executes job bodies, `PriorityQueue`
+  orders waiting work P1-before-P2, and the whole async job counts against
+  the concurrency cap. It does not inherit `TaskScheduler` because a
+  scheduler subclass caps only synchronous segments — an async job frees its
+  scheduler slot at the first await — and cannot express keyed
+  skip-duplicates. `DrainAsync` lives on the concrete type only (tests /
+  shutdown), not on `ISyncJobScheduler`.
 - ACH digit counts are `const` (Sonar S3962). Public names stay PascalCase.
 - Design-time `IDesignTimeDbContextFactory.CreateDbContext(string[] args)`
   keeps `args` (dotnet ef passes an empty array) and does not parse custom

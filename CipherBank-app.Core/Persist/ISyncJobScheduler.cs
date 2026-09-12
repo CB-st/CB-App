@@ -5,10 +5,13 @@
 namespace CipherBank_app.Persist;
 
 /// <summary>
-/// Named, deduplicating, priority job queue for market persist work (P1 chart / P2 cold bootstrap).
-/// Execution is delegated to an injected <see cref="TaskScheduler"/>; this type does not inherit
-/// <see cref="TaskScheduler"/> or use <see cref="ThreadPriority"/> because those APIs do not provide
-/// keyed skip-duplicates, P1-before-P2 among waiting work, a mobile concurrency cap, or <see cref="DrainAsync"/>.
+/// Named, deduplicating task factory for market persist work (P1 chart / P2 cold bootstrap).
+/// Jobs dispatch through an injected <see cref="TaskScheduler"/> via <see cref="TaskFactory"/>;
+/// waiting work is ordered P1-before-P2 (FIFO within a rank) and the whole async job — not just
+/// its first synchronous segment — counts against the mobile concurrency cap. The whole-job cap
+/// and the keyed skip-duplicate contract are factory policy: a <see cref="TaskScheduler"/>
+/// subclass caps only synchronous task segments (an async job frees its scheduler slot at the
+/// first await), so inheritance cannot express either guarantee.
 /// </summary>
 public interface ISyncJobScheduler
 {
@@ -17,10 +20,4 @@ public interface ISyncJobScheduler
     /// Use: High (Home market refresh). Scope: process-wide sync scheduler.
     /// </summary>
     void Enqueue(string key, SyncPriority priority, Func<CancellationToken, Task> work);
-
-    /// <summary>
-    /// Waits until the scheduler has no running or queued jobs.
-    /// Use: Medium (tests / shutdown). Scope: process-wide sync scheduler.
-    /// </summary>
-    Task DrainAsync(CancellationToken ct);
 }
