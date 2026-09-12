@@ -10,10 +10,16 @@ public interface ICustodyService
     /// <summary>Raised when in-memory mnemonic session state is cleared (manual lock, idle expiry, unlock rollback).</summary>
     event EventHandler? Locked;
 
+    /// <summary>Gets a value indicating whether a mnemonic session is currently unlocked in memory.</summary>
     bool IsUnlocked { get; }
 
+    /// <summary>Gets the UTC expiry of the current unlock session, or null when locked.</summary>
     DateTimeOffset? SessionExpiresAt { get; }
 
+    /// <summary>
+    /// True when a sealed custody blob exists on this device.
+    /// Use: High (boot routing Welcome vs Unlock). Scope: this device's custody record.
+    /// </summary>
     Task<bool> HasSealedWalletAsync();
 
     /// <summary>True when a device secret exists so OS-auth unlock is possible.</summary>
@@ -26,14 +32,32 @@ public interface ICustodyService
     /// </summary>
     Task<CustodyPinChangeResult> ChangePinAsync(string oldPin, string newPin);
 
+    /// <summary>
+    /// Seals <paramref name="mnemonic"/> under <paramref name="pin"/> (PIN policy enforced by the PIN
+    /// gate before any secret is written). Use: Low (onboarding / restore). Scope: this device's
+    /// custody record.
+    /// </summary>
     Task SealAsync(string mnemonic, string pin);
 
+    /// <summary>
+    /// Opens the sealed blob with <paramref name="pin"/> and starts an in-memory session; a failed
+    /// verification routes through <see cref="Lock"/> so no prior session survives. Returns false on
+    /// wrong PIN or lockout. Use: High (unlock screen). Scope: this device's custody record.
+    /// </summary>
     Task<bool> UnlockAsync(string pin);
 
     /// <summary>Unlock using the stored device secret (call after successful OS biometrics).</summary>
     Task<bool> UnlockWithDeviceSecretAsync();
 
+    /// <summary>
+    /// Clears the in-memory mnemonic session and raises <see cref="Locked"/>.
+    /// Use: High (idle lock / manual lock / unlock rollback). Scope: in-memory session only.
+    /// </summary>
     void Lock();
 
+    /// <summary>
+    /// Returns the unlocked mnemonic, or null when locked or expired. Callers must not persist the
+    /// value. Use: Low (backup export / signing). Scope: in-memory session only.
+    /// </summary>
     string? ExportMnemonic();
 }
