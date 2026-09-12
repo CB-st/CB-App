@@ -58,8 +58,8 @@ public sealed class RatesCache : IRatesCache
 
     private async Task UpsertCoreAsync(IEnumerable<RateRow> rows, CancellationToken ct)
     {
+        // RateRow normalizes Symbol at construction; only last-write-wins dedupe is needed here.
         RateRow[] normalized = rows
-            .Select(row => row with { Symbol = row.Symbol.ToUpperInvariant() })
             .GroupBy(row => row.Symbol, StringComparer.Ordinal)
             .Select(group => group.Last())
             .ToArray();
