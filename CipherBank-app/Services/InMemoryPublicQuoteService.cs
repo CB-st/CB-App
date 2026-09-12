@@ -4,7 +4,7 @@
 
 using CipherBank_app.Models;
 
-namespace CipherBank_app.Services.Mocks;
+namespace CipherBank_app.Services;
 
 /// <summary>
 /// In-memory stand-in for <see cref="IPublicQuoteService"/> used in DEBUG builds.
