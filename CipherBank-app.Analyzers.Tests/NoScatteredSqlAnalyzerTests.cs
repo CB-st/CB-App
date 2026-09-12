@@ -88,6 +88,30 @@ public sealed class NoScatteredSqlAnalyzerTests
     }
 
     [Fact]
+    public async Task ReportsCommandTextInPersistMigrationsFolder()
+    {
+        var test = new CSharpAnalyzerTest<NoScatteredSqlAnalyzer, DefaultVerifier>
+        {
+            TestState =
+            {
+                Sources =
+                {
+                    ("CipherBank-app.Core/Persist/Migrations/InitialCreate.cs", """
+                        class InitialCreate
+                        {
+                            void Run(System.Data.IDbCommand command)
+                            {
+                                command.{|CB1003:CommandText|} = "SELECT 1";
+                            }
+                        }
+                        """),
+                },
+            },
+        };
+        await test.RunAsync();
+    }
+
+    [Fact]
     public async Task IgnoresSqlOutsideCore()
     {
         var test = new CSharpAnalyzerTest<NoScatteredSqlAnalyzer, DefaultVerifier>
