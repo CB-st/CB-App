@@ -84,6 +84,7 @@ public interface IProductClient
     Task<VaultCardDto> AddVaultCardAsync(VaultCardDto card, string idempotencyKey)
         => AddVaultCardAsync(card, idempotencyKey, CancellationToken.None);
 
+    /// <summary>Deletes a vault card. Use: Low (Profile). Scope: IProductClient consumers.</summary>
     Task DeleteVaultCardAsync(string cardId, CancellationToken ct);
 
     /// <summary>Deletes a vault card for callers with no ambient token. Use: Low (Profile). Scope: IProductClient consumers.</summary>
@@ -114,6 +115,7 @@ public interface IProductClient
     /// <summary>Reads prefs for callers with no ambient token. Use: Medium (sync). Scope: IProductClient consumers.</summary>
     Task<PrefsWireDto?> GetPrefsAsync() => GetPrefsAsync(CancellationToken.None);
 
+    /// <summary>Writes server-side prefs. Use: Medium (sync). Scope: IProductClient consumers.</summary>
     Task PutPrefsAsync(PrefsWireDto prefs, CancellationToken ct);
 
     /// <summary>Writes prefs for callers with no ambient token. Use: Medium (sync). Scope: IProductClient consumers.</summary>
