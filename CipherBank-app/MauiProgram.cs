@@ -203,14 +203,14 @@ public static class MauiProgram
             Log.Debug("Using HttpProductClient (live /v1)");
             return sp.GetRequiredService<HttpProductClient>();
         });
-        mauiAppBuilder.Services.AddSingleton<MockStreamService>();
+        mauiAppBuilder.Services.AddSingleton<InMemoryStreamService>();
         mauiAppBuilder.Services.AddSingleton<IStreamService>(sp =>
         {
             var settings = sp.GetRequiredService<ISettingsService>();
             if (settings.UseMockServices)
             {
-                Log.Debug("Using MockStreamService (based on settings)");
-                return sp.GetRequiredService<MockStreamService>();
+                Log.Debug("Using InMemoryStreamService (based on settings)");
+                return sp.GetRequiredService<InMemoryStreamService>();
             }
 
             Log.Debug("Using ClientWebSocketStreamService");
