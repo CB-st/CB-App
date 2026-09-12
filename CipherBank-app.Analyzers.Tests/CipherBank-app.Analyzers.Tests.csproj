@@ -33,7 +33,4 @@
     <ProjectReference Include="..\CipherBank-app.Analyzers\CipherBank-app.Analyzers.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <AdditionalFiles Include="stylecop.json" />
-  </ItemGroup>
 </Project>
