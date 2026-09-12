@@ -19,6 +19,12 @@
     <AnalysisLevel>latest-recommended</AnalysisLevel>
   </PropertyGroup>
 
+  <!-- One repository-wide StyleCop configuration; do not add per-project stylecop.json copies. -->
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json"
+                     Link="stylecop.json" />
+  </ItemGroup>
+
   <!-- Shared package references for analyzers -->
   <ItemGroup>
     <!-- StyleCop Analyzers for consistent code style -->

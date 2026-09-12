@@ -44,10 +44,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="stylecop.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <!-- Custody storage-key constants stay internal; the unit suite needs them to seed legacy blobs. -->
     <InternalsVisibleTo Include="CipherBank-app.Tests" />
   </ItemGroup>
