@@ -33,7 +33,7 @@ public sealed partial class SettingsService : ISettingsService
     private const bool DefaultBiometricAuthEnabled = false;
     private const int DefaultAutoLockTimeout = 5;
     private const string DefaultDefaultCurrency = "USD";
-    private const SessionProofMode DefaultSessionProofMode = SessionProofMode.Lab;
+    private const SessionProofMode DefaultSessionProofMode = SessionProofMode.ChallengePassA1;
     private const bool DefaultDeveloperModeEnabled = false;
     private const bool DefaultUseMockServices = true;
 

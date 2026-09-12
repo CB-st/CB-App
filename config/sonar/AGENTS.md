@@ -46,7 +46,7 @@ Never add broad `NoWarn`, analysis exclusions, or disabled rules. A narrow
 suppression must state the rule key, safety rationale, evidence, owner, and
 revisit condition.
 
-Never grow `CoverageExclusions` in `config/sonar/exclusions.json` or the
-matching `sonar.coverage.exclusions` property in `.github/workflows/sonar.yml`.
-That list is frozen; cover product code instead. Shrink only with an explicit
-policy change. The dedicated JSON file is the source of truth for analyzer tests.
+Never grow the `sonar.coverage.exclusions` property in
+`.github/workflows/sonar.yml`. That list is frozen; cover product code instead.
+Shrink only with an explicit policy change. The workflow is the single source
+of truth for scanner exclusions — do not reintroduce a mirrored copy.

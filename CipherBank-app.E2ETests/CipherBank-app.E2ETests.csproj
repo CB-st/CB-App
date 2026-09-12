@@ -40,12 +40,14 @@
     <PackageReference Include="Selenium.WebDriver" />
   </ItemGroup>
 
+  <!-- E2E keeps a project-local stylecop.json ("All rights reserved." headers);
+       Directory.Build.props skips the root config for this project. -->
   <ItemGroup>
-    <ProjectReference Include="..\CipherBank-app.Core\CipherBank-app.Core.csproj" />
+    <AdditionalFiles Include="stylecop.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="stylecop.json" />
+    <ProjectReference Include="..\CipherBank-app.Core\CipherBank-app.Core.csproj" />
   </ItemGroup>
 
 </Project>

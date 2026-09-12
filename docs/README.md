@@ -34,7 +34,7 @@ Day-to-day implementer rules (function docs, ownership, complexity, E2E, **Sonar
 | [../AGENTS.md](../AGENTS.md) | **Day-to-day agent rules**, including Sonar typology, Stage 1–3 order, Shell compile gate, common missteps |
 | [BUILD_LOG.md](BUILD_LOG.md) | Condensed prototype map: what shipped, where it lives, connections |
 | [SONAR_GATE.md](SONAR_GATE.md) | Sonar quality-gate policy: what we fix vs soften (with reasons) |
-| [LOCAL_LINT.md](LOCAL_LINT.md) | Pre-push multi-language lint (`./scripts/lint.sh`: C#/shell/Python/C++/Make) |
+| [LOCAL_LINT.md](LOCAL_LINT.md) | Pre-push local lint (`./scripts/lint.sh`: C# + shell) |
 | [LOCAL_SONAR_LINT.md](LOCAL_SONAR_LINT.md) | C# SonarAnalyzer deep dive + SonarQube for IDE Connected Mode |
 | [SONAR_STRUCTURAL_PLAN.md](SONAR_STRUCTURAL_PLAN.md) | Stage 2 SA1402/SA1649 inventory, callers, split targets, execution status |
 | [MAUI_FUNCTION_REF.md](MAUI_FUNCTION_REF.md) | Monolithic INVOKE-style map of MAUI/Core/ChallengePass functions (API.md format) |
@@ -57,9 +57,6 @@ Day-to-day implementer rules (function docs, ownership, complexity, E2E, **Sonar
 | [tests/e2e-local.env.example](tests/e2e-local.env.example) | Template for gitignored harness credentials |
 | [config/README.md](config/README.md) | Build config, analyzers, tooling |
 | [config/sonar/README.md](config/sonar/README.md) | Sonar quality-gate policy and local SonarQube-for-IDE setup |
-| [review/m1a-comment-resolution.md](review/m1a-comment-resolution.md) | M1a PR #25 feedback map |
-| [review/m2-alignment-resolution.md](review/m2-alignment-resolution.md) | M2 PR #21 and M1a forward-port map |
-| [review/m3-alignment-resolution.md](review/m3-alignment-resolution.md) | M3 feature preservation and architecture alignment map |
 | [STACK_STAGED_WORK.md](STACK_STAGED_WORK.md) | Cross-stack goals that land on a later slice (do not backfill earlier PRs) |
 
 Reusable scaffolds are indexed in [../templates/README.md](../templates/README.md).

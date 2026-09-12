@@ -13,7 +13,6 @@ using CipherBank_app.Persist;
 using CipherBank_app.Pos;
 using CipherBank_app.Session;
 using CipherBank_app.Services;
-using CipherBank_app.Services.Mocks;
 using CipherBank_app.V1;
 using CipherBank_app.ViewModels;
 using CipherBank_app.Views;
@@ -183,7 +182,8 @@ public static class MauiProgram
                     catalog.SetActive(ChallengePassServiceCollectionExtensions.SuiteA1Id);
                     return sp.GetRequiredService<ChallengePassSessionProofBuilder>();
                 default:
-                    return sp.GetRequiredService<LabSessionProofBuilder>();
+                    throw new InvalidOperationException(
+                        "MAUI host requires SessionProofMode ChallengePass A1 or A2. Lab proofs stay on Core test DI; they are not a shipping default.");
             }
         });
         mauiAppBuilder.Services.AddSingleton<InMemoryProductClient>();
@@ -203,14 +203,14 @@ public static class MauiProgram
             Log.Debug("Using HttpProductClient (live /v1)");
             return sp.GetRequiredService<HttpProductClient>();
         });
-        mauiAppBuilder.Services.AddSingleton<MockStreamService>();
+        mauiAppBuilder.Services.AddSingleton<InMemoryStreamService>();
         mauiAppBuilder.Services.AddSingleton<IStreamService>(sp =>
         {
             var settings = sp.GetRequiredService<ISettingsService>();
             if (settings.UseMockServices)
             {
-                Log.Debug("Using MockStreamService (based on settings)");
-                return sp.GetRequiredService<MockStreamService>();
+                Log.Debug("Using InMemoryStreamService (based on settings)");
+                return sp.GetRequiredService<InMemoryStreamService>();
             }
 
             Log.Debug("Using ClientWebSocketStreamService");
