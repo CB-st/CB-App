@@ -41,7 +41,7 @@ public class PrefsSyncAndStreamTests
     [Fact]
     public void StreamHub_FansOutOnce_WithoutDoubleSubscribe()
     {
-        MockStreamService stream = new MockStreamService();
+        InMemoryStreamService stream = new InMemoryStreamService();
         StreamHub hub = new StreamHub(stream);
         int count = 0;
         hub.EventReceived += (_, _) => count++;

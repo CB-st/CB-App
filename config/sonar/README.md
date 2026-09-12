@@ -23,11 +23,12 @@ Coverage for new code comes from Coverlet OpenCover produced by:
 Those reports are the coverage job's handoff into the scan. A missing
 OpenCover file leaves `new_coverage` at 0% and reds the gate.
 
-Scanner source and coverage exclusion arrays live in
-[`exclusions.json`](exclusions.json). Analyzer tests lock
-`.github/workflows/sonar.yml` to that file. Do not add `Persist/Migrations`
-or other product Core paths. Do not grow `CoverageExclusions`; cover product
-code instead. Shrink only with an explicit policy change.
+Scanner source and coverage exclusion lists live directly on the
+`dotnet sonarscanner begin` step in `.github/workflows/sonar.yml` — the
+workflow is the single source of truth; there is no second checked-in copy.
+Do not add `Persist/Migrations` or other product Core paths. Do not grow
+`sonar.coverage.exclusions`; cover product code instead. Shrink only with an
+explicit policy change.
 
 Scanner source exclusions are limited to generated/build output, scanner reports,
 editor metadata, scripts, and the out-of-stack design handoff. Platform sources

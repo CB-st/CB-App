@@ -15,7 +15,6 @@ public sealed class SourcePathTests
         Assert.Equal("c.cs", source.FileName);
         Assert.Equal(".cs", source.Extension);
         Assert.Equal("b", source.Parent.FileName);
-        Assert.NotNull(source.File);
     }
 
     [Fact]

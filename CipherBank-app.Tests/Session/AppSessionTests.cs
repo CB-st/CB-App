@@ -130,7 +130,7 @@ public class AppSessionTests
         recipients ??= new MemRecipients();
         api ??= new InMemoryProductClient();
         productSessions ??= new InMemoryProductSessionStore();
-        MockStreamService stream = new MockStreamService();
+        InMemoryStreamService stream = new InMemoryStreamService();
         StreamHub hub = new StreamHub(stream);
         PrefsSyncService prefsSync = new PrefsSyncService(prefs, api);
         AccountBootstrapService bootstrap = new AccountBootstrapService(api, prefs, recipients);

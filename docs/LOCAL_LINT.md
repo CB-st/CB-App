@@ -1,6 +1,6 @@
-# Local multi-language lint (org-ready)
+# Local lint
 
-Pre-push / agent lint that mirrors Sonar-style smell checking for **C#** (same Roslyn engine as SonarQube) and portable stand-ins for **Shell, Python, C++, Make** so Cursor checkouts across CipherBank (tooling Python, backend C++, Makefiles) share one workflow.
+Pre-push / agent lint that mirrors Sonar-style smell checking for **C#** (same Roslyn engine as SonarQube) plus **shellcheck** for the repo's shell scripts. Lanes exist only for languages this repo contains; the Python/C++/Make stand-ins were removed and live in git history if those sources ever land.
 
 **Sonar policy:** [SONAR_GATE.md](SONAR_GATE.md) · **Server:** https://sonar.cipherbank.money
 
@@ -14,7 +14,7 @@ Pre-push / agent lint that mirrors Sonar-style smell checking for **C#** (same R
 ./scripts/lint.sh --core-only     # C#: Core + Tests only (M1)
 ```
 
-On this MAUI repo tip you typically get **csharp + shell**; python / cpp / make print `skip (…): no sources` until those files exist.
+On this MAUI repo tip you get **csharp + shell**.
 
 ## Languages
 
@@ -22,12 +22,8 @@ On this MAUI repo tip you typically get **csharp + shell**; python / cpp / make 
 |------|--------|------|----------------|
 | C# | `lint-csharp.sh` | SonarAnalyzer.CSharp (opt-in NuGet) | `*.csproj` / `*.cs` present |
 | Shell | `lint-shell.sh` | shellcheck | `*.sh` present |
-| Python | `lint-python.sh` | ruff | `*.py` present |
-| C++ | `lint-cpp.sh` | clang-tidy (+ optional clang-format dry-run) | C/C++ sources or `CMakeLists.txt` |
-| Make | `lint-make.sh` | checkmake | `Makefile` / `*.mk` |
 
-Pinned versions: `scripts/lint/tool-versions.env`.  
-Default configs (for other repos / when no project config): `scripts/lint/configs/`.
+Pinned versions: `scripts/lint/tool-versions.env`.
 
 ## C# / Sonar alignment
 

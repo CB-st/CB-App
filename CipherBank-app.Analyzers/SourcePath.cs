@@ -5,22 +5,18 @@
 namespace CipherBank_app.Analyzers;
 
 /// <summary>
-/// Host-native additional-file path. <see cref="FileInfo"/> is sealed, so this type wraps one
-/// and keeps the original Roslyn string for predicates (no <see cref="Path.GetFullPath"/>).
+/// Predicates over the original Roslyn/MSBuild additional-file path string.
+/// Works on the string as supplied (no <see cref="Path.GetFullPath"/>, no filesystem access)
+/// so analyzer decisions stay deterministic across hosts.
 /// </summary>
 internal sealed class SourcePath
 {
     private readonly string _path;
-    private readonly FileInfo _file;
 
     private SourcePath(string path)
     {
         _path = path;
-        _file = new FileInfo(string.IsNullOrEmpty(path) ? "_" : path);
     }
-
-    /// <summary>Gets the wrapped file identity for the additional path.</summary>
-    internal FileInfo File => _file;
 
     /// <summary>Gets the last segment via <see cref="Path.GetFileName"/>.</summary>
     internal string FileName => Path.GetFileName(_path);
