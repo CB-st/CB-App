@@ -1,4 +1,4 @@
-// <copyright file="MarketBootstrapTests.cs" company="CipherBank">
+// <copyright file="MarketRateHydratorTests.cs" company="CipherBank">
 // Copyright (c) CipherBank. Licensed under the BSD 3-Clause License.
 // </copyright>
 
@@ -10,7 +10,7 @@ using Xunit;
 
 namespace CipherBank_app.Tests.Persist;
 
-public class MarketBootstrapTests
+public sealed class MarketRateHydratorTests
 {
     [Fact]
     public void FromQuote_MapsInverseQuoteRateAndTimestamp()
@@ -30,14 +30,12 @@ public class MarketBootstrapTests
         MemoryRatesCache cache = new MemoryRatesCache();
         cache.Seed(new RateRow("BTC", 1m, 0m, nowMs + (long)TimeSpan.FromHours(1).TotalMilliseconds));
         CountingQuoteService quotes = new CountingQuoteService();
-        FixedTimeProvider clock = new FixedTimeProvider(now);
-
-        await MarketBootstrap.HydrateAndRefreshAsync(
+        MarketRateHydrator hydrator = new MarketRateHydrator(
             cache,
             quotes,
-            ["BTC"],
-            clock,
-            CancellationToken.None);
+            new FixedTimeProvider(now));
+
+        await hydrator.HydrateAndRefreshAsync([" btc "], CancellationToken.None);
 
         quotes.InverseQuoteCalls.Should().Be(1);
         cache.UpsertCalls.Should().Be(1);
@@ -52,14 +50,12 @@ public class MarketBootstrapTests
         MemoryRatesCache cache = new MemoryRatesCache();
         cache.Seed(new RateRow("BTC", 1m, 0m, nowMs - (long)TimeSpan.FromMinutes(1).TotalMilliseconds));
         CountingQuoteService quotes = new CountingQuoteService();
-        FixedTimeProvider clock = new FixedTimeProvider(now);
-
-        await MarketBootstrap.HydrateAndRefreshAsync(
+        MarketRateHydrator hydrator = new MarketRateHydrator(
             cache,
             quotes,
-            ["BTC"],
-            clock,
-            CancellationToken.None);
+            new FixedTimeProvider(now));
+
+        await hydrator.HydrateAndRefreshAsync(["BTC"], CancellationToken.None);
 
         quotes.InverseQuoteCalls.Should().Be(0);
         cache.UpsertCalls.Should().Be(0);

@@ -48,6 +48,10 @@ declare -A SEALED_SMOKE_WAVES=(
   [pay]=1
 )
 
+# Explicit executable M7 catalog. --all never drops its filter and therefore
+# cannot select legacy tests that do not carry a Story trait.
+ALL_STORIES="CB-ACCOUNT-001 CB-ACCOUNT-002 CB-ACCOUNT-PIN-CHANGE US-ONB-01 US-ONB-02 US-ONB-03 US-ONB-04 US-LCK-01 US-CNV-01 US-RCV-01 CB-FUND-001 US-HOM-05 CB-MARKET-001 US-SND-01 US-POS-01 CB-PAY-003"
+
 # Prints CLI usage/help text.
 # Use: Low (only on --help or an arg error). Scope: process-wide stdout.
 print_usage() {
@@ -143,8 +147,8 @@ resolve_test_filter() {
       join_story_filter "$stories"
       ;;
     all)
-      # Empty marker: main() runs Fresh then Sealed as two separate invocations.
-      echo ""
+      # Preflight the explicit catalog; main runs fresh and sealed classes separately.
+      join_story_filter "$ALL_STORIES"
       ;;
   esac
 }
@@ -167,13 +171,23 @@ join_story_filter() {
 # Use: High (every filtered run). Scope: CipherBank-app.E2ETests discovery.
 preflight_filter_or_die() {
   local filter="$1"
-  [[ -n "$filter" ]] || return 0
   log "Preflight: listing tests for filter '$filter'"
   local discovery
   discovery="$(dotnet test "$E2E_PROJECT" --nologo --no-restore --list-tests --filter "$filter" 2>&1 || true)"
   if ! grep -qE '^[[:space:]]+CipherBank_app\.' <<<"$discovery"; then
     printf '%s\n' "$discovery" >&2
     die "filter matched zero tests: $filter"
+  fi
+
+  if [[ "$MODE" == "all" ]]; then
+    local story
+    for story in $ALL_STORIES; do
+      discovery="$(dotnet test "$E2E_PROJECT" --nologo --no-restore --list-tests --filter "Story=$story" 2>&1 || true)"
+      if ! grep -qE '^[[:space:]]+CipherBank_app\.' <<<"$discovery"; then
+        printf '%s\n' "$discovery" >&2
+        die "--all catalog is incomplete; Story=$story matched zero tests"
+      fi
+    done
   fi
 }
 

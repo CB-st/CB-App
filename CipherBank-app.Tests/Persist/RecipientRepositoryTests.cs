@@ -2,9 +2,7 @@
 // Copyright (c) CipherBank. Licensed under the BSD 3-Clause License.
 // </copyright>
 
-using CipherBank_app.Configuration;
 using CipherBank_app.Persist;
-using CipherBank_app.Tests.Configuration;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -15,49 +13,12 @@ namespace CipherBank_app.Tests.Persist;
 public class RecipientRepositoryTests
 {
     [Fact]
-    public async Task SeedAndList_Works()
-    {
-        string path = Path.Combine(Path.GetTempPath(), "cb-test-" + Guid.NewGuid().ToString("N") + ".db");
-        LocalDb db = new LocalDb(new FileInfo(path));
-        await db.InitializeAsync();
-        RecipientRepository repo = new RecipientRepository(db, EmbeddedAppSettings.BindPersistence());
-        await repo.SeedDefaultsIfEmptyAsync();
-        IReadOnlyList<AchRecipientRow> list = await repo.ListAsync();
-        list.Should().HaveCountGreaterThanOrEqualTo(2);
-        await repo.SeedDefaultsIfEmptyAsync();
-        (await repo.ListAsync()).Should().HaveCount(list.Count);
-    }
-
-    /// <summary>
-    /// Concurrent first-run seeds must produce one default set with stable IDs.
-    /// Use: Medium (review regression). Scope: RecipientRepositoryTests.
-    /// </summary>
-    [Fact]
-    public async Task SeedDefaultsIfEmptyAsync_ConcurrentCallsCreateOneDefaultSet()
-    {
-        string path = Path.Combine(Path.GetTempPath(), "cb-test-" + Guid.NewGuid().ToString("N") + ".db");
-        LocalDb db = new LocalDb(new FileInfo(path));
-        await db.InitializeAsync();
-        RecipientRepository repo = new RecipientRepository(db, EmbeddedAppSettings.BindPersistence());
-
-        await Task.WhenAll(repo.SeedDefaultsIfEmptyAsync(), repo.SeedDefaultsIfEmptyAsync());
-
-        IReadOnlyList<AchRecipientRow> listed = await repo.ListAsync();
-        listed.Should().HaveCount(2);
-        listed.Select(row => row.Id).Should().BeEquivalentTo(
-        [
-            RecipientRepository.DefaultRentRecipientId,
-            RecipientRepository.DefaultUtilitiesRecipientId,
-        ]);
-    }
-
-    [Fact]
     public async Task DeleteAsync_RemovesOnlyRecipientWithMatchingId()
     {
         string path = Path.Combine(Path.GetTempPath(), "cb-test-" + Guid.NewGuid().ToString("N") + ".db");
         LocalDb db = new LocalDb(new FileInfo(path));
         await db.InitializeAsync();
-        RecipientRepository repo = new RecipientRepository(db, EmbeddedAppSettings.BindPersistence());
+        RecipientRepository repo = new RecipientRepository(db);
         AchRecipientRow recipientToDelete = new AchRecipientRow(
             "delete-me",
             "Delete me",
@@ -85,7 +46,7 @@ public class RecipientRepositoryTests
         string path = Path.Combine(Path.GetTempPath(), "cb-test-" + Guid.NewGuid().ToString("N") + ".db");
         LocalDb db = new LocalDb(new FileInfo(path));
         await db.InitializeAsync();
-        RecipientRepository repo = new RecipientRepository(db, EmbeddedAppSettings.BindPersistence());
+        RecipientRepository repo = new RecipientRepository(db);
         await repo.UpsertAsync(new AchRecipientRow(
             "payee-1",
             "Payee",
@@ -145,7 +106,7 @@ public class RecipientRepositoryTests
         string path = Path.Combine(Path.GetTempPath(), "cb-test-" + Guid.NewGuid().ToString("N") + ".db");
         LocalDb db = new LocalDb(new FileInfo(path));
         await db.InitializeAsync();
-        RecipientRepository repo = new RecipientRepository(db, EmbeddedAppSettings.BindPersistence());
+        RecipientRepository repo = new RecipientRepository(db);
         await repo.UpsertAsync(new AchRecipientRow(
             "payee-1",
             "Payee",
@@ -172,17 +133,19 @@ public class RecipientRepositoryTests
     }
 
     /// <summary>
-    /// An empty DefaultRecipients list is valid and inserts nothing.
-    /// Use: Medium. Scope: RecipientRepository.SeedDefaultsIfEmptyAsync.
+    /// Recipient reads must propagate caller cancellation into database initialization and EF.
+    /// Use: Medium (payee navigation cancellation). Scope: RecipientRepository.
     /// </summary>
     [Fact]
-    public async Task SeedDefaultsIfEmptyAsync_EmptyOptions_DoesNotInsert()
+    public async Task ListAsync_CanceledToken_ThrowsOperationCanceledException()
     {
         string path = Path.Combine(Path.GetTempPath(), "cb-test-" + Guid.NewGuid().ToString("N") + ".db");
-        LocalDb db = new LocalDb(new FileInfo(path));
-        await db.InitializeAsync();
-        RecipientRepository repo = new RecipientRepository(db, new PersistenceOptions());
-        await repo.SeedDefaultsIfEmptyAsync();
-        (await repo.ListAsync()).Should().BeEmpty();
+        RecipientRepository repo = new RecipientRepository(new LocalDb(new FileInfo(path)));
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        Func<Task> act = async () => await repo.ListAsync(cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 }

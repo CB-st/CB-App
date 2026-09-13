@@ -28,7 +28,7 @@ public class CipherBankCoreDiTests
         Directory.CreateDirectory(databaseDirectory);
 
         ServiceCollection services = new ServiceCollection();
-        services.AddCipherBankCore(CipherBankDefaultsConfiguration.Build(), databaseDirectory);
+        services.AddCipherBankCore(CipherBankDefaultsConfiguration.Build("Development"), databaseDirectory);
         using ServiceProvider provider = services.BuildServiceProvider();
 
         provider.GetRequiredService<ICryptoBox>().Should().BeOfType<AesGcmCryptoBox>();
@@ -42,6 +42,7 @@ public class CipherBankCoreDiTests
             "seed:utilities-co");
         provider.GetRequiredService<IWalletRepository>().Should().BeOfType<WalletRepository>();
         provider.GetRequiredService<IRecipientRepository>().Should().BeOfType<RecipientRepository>();
+        provider.GetRequiredService<IRecipientSeedInitializer>().Should().BeOfType<RecipientSeedInitializer>();
         provider.GetRequiredService<IMarketRepository>().Should().BeOfType<MarketRepository>();
         provider.GetRequiredService<IPrefsStore>().Should().BeOfType<PrefsStore>();
         provider.GetRequiredService<IRatesCache>().Should().BeOfType<RatesCache>();

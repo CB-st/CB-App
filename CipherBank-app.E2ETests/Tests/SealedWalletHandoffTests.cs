@@ -37,10 +37,38 @@ public class SealedWalletHandoffTests
     public void EnsureSealedLockedWallet_ColdStartUnlock()
     {
         Skip.If(_fixture is null, "E2E_RUN not set");
-        UnlockPage unlock = new UnlockPage(_fixture!.Driver);
+        StoryJournal journal = _fixture!.Journal;
+        UnlockPage unlock = new UnlockPage(_fixture.Driver);
         unlock.IsLoaded().Should().BeTrue(
             "sealed handoff must leave UnlockPinEntry before CoraShellSmokeTests (AccountStories Fact order is not a contract)");
-        _fixture.Journal.RecordStep("handoff: sealed locked wallet (UnlockPinEntry)");
-        _fixture.Journal.Flush("E2E-HANDOFF-SEAL");
+
+        HomePage home;
+        if (!unlock.TryUnlockWithPin(journal.Pin, out HomePage? primaryHome))
+        {
+            unlock.IsErrorDisplayed().Should().BeTrue("the configured primary PIN was not active");
+            home = unlock.UnlockWithPin(journal.AlternatePin);
+            home.WaitForPageLoad();
+
+            ProfilePage profile = home.GoToProfileTab();
+            profile.WaitForPageLoad();
+            ChangePinPage changePin = profile.OpenChangePin();
+            changePin.WaitForPageLoad();
+            changePin.Submit(journal.AlternatePin, journal.Pin, journal.Pin);
+            changePin.IsStatusDisplayed().Should().BeTrue(
+                "handoff must restore the configured primary PIN after a PIN-change story");
+            profile = changePin.BackToProfile();
+            profile.WaitForPageLoad();
+            unlock = profile.LockApp();
+        }
+        else
+        {
+            home = primaryHome!;
+            unlock = home.GoToProfileTab().LockApp();
+        }
+
+        unlock.WaitForPageLoad();
+        unlock.IsLoaded().Should().BeTrue("handoff must finish locked with the configured primary PIN active");
+        journal.RecordStep("handoff: normalized active credential and left sealed wallet on UnlockPinEntry");
+        journal.Flush("E2E-HANDOFF-SEAL");
     }
 }

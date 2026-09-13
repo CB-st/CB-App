@@ -9,7 +9,7 @@ using Xunit;
 namespace CipherBank_app.E2ETests.Tests;
 
 /// <summary>
-/// Stories that list payees must use Persistence:DefaultRecipients ids, not generated GUIDs.
+/// Development stories that list payees use stable overlay ids, not generated GUIDs.
 /// Use: High (US-SND-01 / package reset). Scope: E2E seed contract.
 /// </summary>
 public sealed class ConfigSeedPayeeIdTests
@@ -17,7 +17,7 @@ public sealed class ConfigSeedPayeeIdTests
     [Fact]
     public void PersistenceDefaultRecipients_UseStableConfigIdsNotGuids()
     {
-        string json = File.ReadAllText(FindAppSettings());
+        string json = File.ReadAllText(FindDevelopmentAppSettings());
         using JsonDocument document = JsonDocument.Parse(json);
         JsonElement rows = document.RootElement.GetProperty("Persistence").GetProperty("DefaultRecipients");
         string[] ids = rows.EnumerateArray()
@@ -30,12 +30,12 @@ public sealed class ConfigSeedPayeeIdTests
         }
     }
 
-    private static string FindAppSettings()
+    private static string FindDevelopmentAppSettings()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            string candidate = Path.Combine(directory.FullName, "config", "appsettings.json");
+            string candidate = Path.Combine(directory.FullName, "config", "appsettings.Development.json");
             if (File.Exists(candidate) && File.Exists(Path.Combine(directory.FullName, "CipherBank-app.sln")))
             {
                 return candidate;
@@ -44,6 +44,7 @@ public sealed class ConfigSeedPayeeIdTests
             directory = directory.Parent;
         }
 
-        throw new InvalidOperationException("Could not locate config/appsettings.json from the E2E test assembly.");
+        throw new InvalidOperationException(
+            "Could not locate config/appsettings.Development.json from the E2E test assembly.");
     }
 }

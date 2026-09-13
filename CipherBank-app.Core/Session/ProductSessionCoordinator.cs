@@ -43,7 +43,7 @@ public sealed class ProductSessionCoordinator : IProductSessionCoordinator
     public async Task<ProductSessionStartResult> StartAsync(bool applyBootstrap, CancellationToken ct)
     {
         // Preserve any already-loaded local idle timeout if refresh fails below.
-        UserPrefs localPrefs = await _prefs.LoadAsync().ConfigureAwait(false);
+        UserPrefs localPrefs = await _prefs.LoadAsync(ct).ConfigureAwait(false);
         int lockIdleSeconds = localPrefs.LockIdleSeconds;
 
         SessionDto session = await _client.CreateSessionAsync(ct).ConfigureAwait(false);
@@ -69,8 +69,15 @@ public sealed class ProductSessionCoordinator : IProductSessionCoordinator
                 await _bootstrap.ApplyAsync(ct).ConfigureAwait(false);
             }
 
-            UserPrefs prefs = await _prefs.LoadAsync().ConfigureAwait(false);
+            UserPrefs prefs = await _prefs.LoadAsync(ct).ConfigureAwait(false);
             lockIdleSeconds = prefs.LockIdleSeconds;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _streamHub.StopStreaming();
+            _productSessions.Clear();
+            await _stream.DisconnectAsync().ConfigureAwait(false);
+            throw;
         }
         catch (InvalidOperationException)
         {
@@ -97,10 +104,6 @@ public sealed class ProductSessionCoordinator : IProductSessionCoordinator
             // Preference/bootstrap refresh is best-effort after session establishment.
         }
         catch (HttpRequestException)
-        {
-            // Preference/bootstrap refresh is best-effort after session establishment.
-        }
-        catch (OperationCanceledException)
         {
             // Preference/bootstrap refresh is best-effort after session establishment.
         }

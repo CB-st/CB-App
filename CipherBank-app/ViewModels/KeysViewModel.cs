@@ -16,6 +16,7 @@ public partial class KeysViewModel : ObservableObject
 {
     private readonly INavigationService _nav;
     private readonly OnboardingMnemonicHold _mnemonicHold;
+    private readonly IAppClipboard _clipboard;
 
     /// <summary>
     /// Generates a fresh mnemonic for the create-wallet path.
@@ -24,10 +25,12 @@ public partial class KeysViewModel : ObservableObject
     public KeysViewModel(
         INavigationService nav,
         OnboardingMnemonicHold mnemonicHold,
+        IAppClipboard clipboard,
         ICoraLineProvider coraLines)
     {
         _nav = nav;
         _mnemonicHold = mnemonicHold;
+        _clipboard = clipboard;
         Mnemonic = MnemonicHelper.Generate();
         CoraLine = coraLines.GetLine("keys");
     }
@@ -41,7 +44,7 @@ public partial class KeysViewModel : ObservableObject
     [RelayCommand]
     private async Task CopyAsync()
     {
-        await Clipboard.Default.SetTextAsync(Mnemonic);
+        await _clipboard.SetTextAsync(Mnemonic);
     }
 
     /// <summary>

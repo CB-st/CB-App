@@ -29,6 +29,7 @@ Dependencies point inward: MAUI and ChallengePass may depend on Core; Core never
 7. Prefer framework facilities (`ArgumentNullException.ThrowIfNull`, `TimeProvider`, `Math.Sign`, spans, cryptographic zeroization, options validation) over local substitutes.
 8. Repository-owned configuration is separated by theme under `config/`, documented by a neighboring `README.md`, represented by typed options, validated at startup, and free of secrets.
 9. One primary type per C# file. The filename matches the primary type.
+10. Non-trivial vertical slices expose one explicit `Add<Feature>Feature` registration extension at the MAUI composition root. ViewModels use injected ports rather than MAUI globals.
 
 ## Function and API documentation
 

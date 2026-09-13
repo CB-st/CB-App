@@ -48,6 +48,26 @@ public class UnlockPage : BasePage
     }
 
     /// <summary>
+    /// Attempts one candidate PIN and reports whether Home became visible.
+    /// Use: Low (--all credential normalization). Scope: sealed handoff.
+    /// </summary>
+    public bool TryUnlockWithPin(string pin, out HomePage? home)
+    {
+        HomePage candidate = UnlockWithPin(pin);
+        try
+        {
+            candidate.WaitForPageLoad();
+            home = candidate;
+            return true;
+        }
+        catch (WebDriverTimeoutException)
+        {
+            home = null;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Enters a PIN the caller expects to be rejected and stays on this page object so the caller can assert
     /// the error surfaced and Unlock is still on screen.
     /// Use: Medium (revoked/wrong-PIN assertions). Scope: this page object.

@@ -14,8 +14,6 @@ using CipherBank_app.Pos;
 using CipherBank_app.Session;
 using CipherBank_app.Services;
 using CipherBank_app.V1;
-using CipherBank_app.ViewModels;
-using CipherBank_app.Views;
 using CipherBank_app.Wallets;
 using Microsoft.Extensions.Configuration;
 using Plugin.Maui.Biometric;
@@ -30,7 +28,23 @@ namespace CipherBank_app;
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
-        => MauiApp.CreateBuilder()
+    {
+#if DEBUG
+        const bool IsDevelopment = true;
+#else
+        const bool IsDevelopment = false;
+#endif
+#if WINDOWS
+        const bool IsWindows = true;
+#else
+        const bool IsWindows = false;
+#endif
+        MauiAppBuilder builder = MauiApp.CreateBuilder();
+        builder.Configuration.AddConfiguration(CipherBankDefaultsConfiguration.BuildForHost(
+            IsDevelopment,
+            IsWindows));
+
+        return builder
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
@@ -58,9 +72,9 @@ public static class MauiProgram
             })
             .ConfigureLogging()
             .RegisterServices()
-            .RegisterViewModels()
-            .RegisterViews()
+            .AddCoraShellFeature()
             .Build();
+    }
 
     // The idle-lock service starts after AppShell resolves the application graph.
 
@@ -117,8 +131,6 @@ public static class MauiProgram
     /// </summary>
     public static MauiAppBuilder RegisterServices(this MauiAppBuilder mauiAppBuilder)
     {
-        // Repository-owned defaults load before deployment/user providers override them.
-        mauiAppBuilder.Configuration.AddConfiguration(CipherBankDefaultsConfiguration.Build());
         mauiAppBuilder.Configuration.AddConfiguration(ChallengePassDefaultsConfiguration.Build());
         mauiAppBuilder.Services.AddCipherBankCore(
             mauiAppBuilder.Configuration,
@@ -127,6 +139,9 @@ public static class MauiProgram
         // Settings Service (singleton - needed first for other service configuration)
         mauiAppBuilder.Services.AddSingleton<ISettingsService, SettingsService>();
         mauiAppBuilder.Services.AddSingleton<IThemeColorProvider, MauiThemeColorProvider>();
+        mauiAppBuilder.Services.AddSingleton<IUiDispatcher, MauiUiDispatcher>();
+        mauiAppBuilder.Services.AddSingleton<IPosCardSelectionStore, MauiPosCardSelectionStore>();
+        mauiAppBuilder.Services.AddSingleton<TaskScheduler>(TaskScheduler.Default);
 
         // MAUI adapters and Core coordinators.
         mauiAppBuilder.Services.AddSingleton<ISecureStore, MauiSecureStore>();
@@ -266,70 +281,10 @@ public static class MauiProgram
 #else
         mauiAppBuilder.Services.AddTransient<IPublicQuoteService>(sp => sp.GetRequiredService<PublicApiClient>());
 #endif
+        mauiAppBuilder.Services.AddSingleton<MarketRateHydrator>();
 
         Log.Information("Services registered successfully");
         return mauiAppBuilder;
     }
 
-    /// <summary>
-    /// Registers all ViewModels with dependency injection.
-    /// </summary>
-    public static MauiAppBuilder RegisterViewModels(this MauiAppBuilder mauiAppBuilder)
-    {
-        mauiAppBuilder.Services.AddTransient<WelcomeViewModel>();
-        mauiAppBuilder.Services.AddTransient<KeysViewModel>();
-        mauiAppBuilder.Services.AddTransient<BackupQuizViewModel>();
-        mauiAppBuilder.Services.AddTransient<SetPinViewModel>();
-        mauiAppBuilder.Services.AddTransient<UnlockViewModel>();
-        mauiAppBuilder.Services.AddTransient<ChangePinViewModel>();
-        mauiAppBuilder.Services.AddTransient<RestoreBackupViewModel>();
-        mauiAppBuilder.Services.AddTransient<HomeViewModel>();
-        mauiAppBuilder.Services.AddTransient<ConvertViewModel>();
-        mauiAppBuilder.Services.AddTransient<SendViewModel>();
-        mauiAppBuilder.Services.AddTransient<PayViewModel>();
-        mauiAppBuilder.Services.AddTransient<ReceiveViewModel>();
-        mauiAppBuilder.Services.AddTransient<ProfileViewModel>();
-        mauiAppBuilder.Services.AddTransient<PosLabViewModel>();
-        mauiAppBuilder.Services.AddTransient<AddWalletViewModel>();
-        // Legacy pages kept registered for optional deep-links
-        mauiAppBuilder.Services.AddTransient<LoginViewModel>();
-        mauiAppBuilder.Services.AddTransient<DashboardViewModel>();
-        mauiAppBuilder.Services.AddTransient<WalletViewModel>();
-        mauiAppBuilder.Services.AddTransient<PurchaseViewModel>();
-        mauiAppBuilder.Services.AddTransient<SettingsViewModel>();
-
-        Log.Information("ViewModels registered successfully");
-        return mauiAppBuilder;
-    }
-
-    /// <summary>
-    /// Registers all Views/Pages with dependency injection.
-    /// </summary>
-    public static MauiAppBuilder RegisterViews(this MauiAppBuilder mauiAppBuilder)
-    {
-        mauiAppBuilder.Services.AddTransient<SplashPage>();
-        mauiAppBuilder.Services.AddTransient<WelcomePage>();
-        mauiAppBuilder.Services.AddTransient<KeysPage>();
-        mauiAppBuilder.Services.AddTransient<BackupQuizPage>();
-        mauiAppBuilder.Services.AddTransient<SetPinPage>();
-        mauiAppBuilder.Services.AddTransient<UnlockPage>();
-        mauiAppBuilder.Services.AddTransient<ChangePinPage>();
-        mauiAppBuilder.Services.AddTransient<RestoreBackupPage>();
-        mauiAppBuilder.Services.AddTransient<HomePage>();
-        mauiAppBuilder.Services.AddTransient<ConvertPage>();
-        mauiAppBuilder.Services.AddTransient<SendPage>();
-        mauiAppBuilder.Services.AddTransient<PayPage>();
-        mauiAppBuilder.Services.AddTransient<ReceivePage>();
-        mauiAppBuilder.Services.AddTransient<ProfilePage>();
-        mauiAppBuilder.Services.AddTransient<PosLabPage>();
-        mauiAppBuilder.Services.AddTransient<AddWalletPage>();
-        mauiAppBuilder.Services.AddTransient<LoginPage>();
-        mauiAppBuilder.Services.AddTransient<DashboardPage>();
-        mauiAppBuilder.Services.AddTransient<WalletPage>();
-        mauiAppBuilder.Services.AddTransient<PurchasePage>();
-        mauiAppBuilder.Services.AddTransient<SettingsPage>();
-
-        Log.Information("Views registered successfully");
-        return mauiAppBuilder;
-    }
 }

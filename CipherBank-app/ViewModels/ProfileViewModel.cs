@@ -54,6 +54,8 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
     private readonly IStepUpAuth _stepUp;
     private readonly IMnemonicBackupService _backup;
     private readonly IBackupFileService _backupFiles;
+    private readonly IPosCardSelectionStore _cardSelection;
+    private readonly IUiDispatcher _dispatcher;
     private CancellationTokenSource? _mnemonicClearCts;
 
     private readonly TimeProvider _timeProvider;
@@ -72,6 +74,8 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
         IMnemonicBackupService backup,
         IBackupFileService backupFiles,
         TimeProvider timeProvider,
+        IPosCardSelectionStore cardSelection,
+        IUiDispatcher dispatcher,
         ICoraLineProvider coraLines)
     {
         _timeProvider = timeProvider;
@@ -87,6 +91,8 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
         _stepUp = stepUp;
         _backup = backup;
         _backupFiles = backupFiles;
+        _cardSelection = cardSelection;
+        _dispatcher = dispatcher;
         CoraLine = coraLines.GetLine("profile");
         foreach (string a in AppearanceChoices)
         {
@@ -214,7 +220,7 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
         }
 
         await LoadVaultAsync();
-        ActiveCardId = Preferences.Default.Get("pos_active_card", Cards.FirstOrDefault()?.CardId ?? string.Empty);
+        ActiveCardId = _cardSelection.Get(Cards.FirstOrDefault()?.CardId ?? string.Empty);
         SelectedCard = Cards.FirstOrDefault(c => c.CardId == ActiveCardId) ?? Cards.FirstOrDefault();
         ActiveCardLabel = SelectedCard is null ? null : $"{SelectedCard.Label} •••• {SelectedCard.Last4}";
     }
@@ -457,7 +463,7 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
         {
             ActiveCardId = Cards.FirstOrDefault()?.CardId;
             SelectedCard = Cards.FirstOrDefault();
-            Preferences.Default.Set("pos_active_card", ActiveCardId ?? string.Empty);
+            _cardSelection.Set(ActiveCardId ?? string.Empty);
         }
     }
 
@@ -477,18 +483,24 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
         _mnemonicClearCts?.Dispose();
         _mnemonicClearCts = new CancellationTokenSource();
         CancellationToken token = _mnemonicClearCts.Token;
-        _ = Task.Run(async () =>
+        _ = ClearMnemonicAfterDelayAsync(token);
+    }
+
+    /// <summary>
+    /// Clears a revealed mnemonic after the bounded display interval.
+    /// Use: Low (per successful reveal). Scope: this Profile instance.
+    /// </summary>
+    private async Task ClearMnemonicAfterDelayAsync(CancellationToken token)
+    {
+        try
         {
-            try
-            {
-                await Task.Delay(MnemonicRevealTtl, token).ConfigureAwait(false);
-                MainThread.BeginInvokeOnMainThread(ClearMnemonicReveal);
-            }
-            catch (OperationCanceledException)
-            {
-                // superseded
-            }
-        }, token);
+            await Task.Delay(MnemonicRevealTtl, token).ConfigureAwait(false);
+            await _dispatcher.DispatchAsync(ClearMnemonicReveal).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // Superseded or page disposed.
+        }
     }
 
     partial void OnSelectedCardChanged(VaultCardDto? value)
@@ -500,7 +512,7 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
 
         ActiveCardId = value.CardId;
         ActiveCardLabel = $"{value.Label} •••• {value.Last4}";
-        Preferences.Default.Set("pos_active_card", value.CardId);
+        _cardSelection.Set(value.CardId);
     }
 
     [RelayCommand]
@@ -540,7 +552,6 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
     private void Lock()
     {
         _session.Lock();
-        _ = _nav.GoToAsync(Routes.Unlock);
     }
 
     /// <summary>

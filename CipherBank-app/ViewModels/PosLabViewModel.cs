@@ -23,6 +23,7 @@ public partial class PosLabViewModel : ObservableObject
     private readonly IDialogService _dialogs;
     private readonly IStepUpAuth _stepUp;
     private readonly IEmvExchangeSimulator _emvSimulator;
+    private readonly IPosCardSelectionStore _cardSelection;
 
     public PosLabViewModel(
         IProductClient api,
@@ -31,6 +32,7 @@ public partial class PosLabViewModel : ObservableObject
         IDialogService dialogs,
         IStepUpAuth stepUp,
         IEmvExchangeSimulator emvSimulator,
+        IPosCardSelectionStore cardSelection,
         ICoraLineProvider coraLines)
     {
         _api = api;
@@ -39,6 +41,7 @@ public partial class PosLabViewModel : ObservableObject
         _dialogs = dialogs;
         _stepUp = stepUp;
         _emvSimulator = emvSimulator;
+        _cardSelection = cardSelection;
         CoraLine = coraLines.GetLine("pos");
         NfcSupported = _nfc.IsSupported;
         PlatformHint = _nfc.IsSupported
@@ -89,7 +92,7 @@ public partial class PosLabViewModel : ObservableObject
     {
         _session.Touch();
         NfcSupported = _nfc.IsSupported;
-        string cardId = Preferences.Default.Get("pos_active_card", string.Empty);
+        string cardId = _cardSelection.Get(string.Empty);
         ActiveCardLabel = string.IsNullOrEmpty(cardId) ? "Default hardware test card" : $"Card {cardId[..Math.Min(8, cardId.Length)]}…";
     }
 
