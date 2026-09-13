@@ -16,8 +16,19 @@ namespace CipherBank_app.Persist;
 public interface ISyncJobScheduler
 {
     /// <summary>
-    /// Enqueues keyed work; duplicate keys already pending or in-flight are ignored.
+    /// Enqueues keyed work and returns its observable completion. A duplicate key receives the
+    /// existing job task; its cancellation token does not replace the accepted job's token.
     /// Use: High (Home market refresh). Scope: process-wide sync scheduler.
     /// </summary>
-    void Enqueue(string key, SyncPriority priority, Func<CancellationToken, Task> work);
+    Task EnqueueAsync(
+        string key,
+        SyncPriority priority,
+        Func<CancellationToken, Task> work,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Waits for all queued and running work, propagating job faults and caller cancellation.
+    /// Use: Medium (bounded shutdown and tests). Scope: process-wide sync scheduler.
+    /// </summary>
+    Task DrainAsync(CancellationToken ct = default);
 }

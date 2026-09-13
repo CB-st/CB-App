@@ -34,4 +34,21 @@ public sealed class LocalDbInitializeTests
             (await context.SyncMetadata.CountAsync()).Should().Be(0);
         }
     }
+
+    /// <summary>
+    /// Disposing while migration is active must not dispose synchronization state still owned by initialization.
+    /// Use: Low (shutdown race regression). Scope: LocalDb lifecycle.
+    /// </summary>
+    [Fact]
+    public async Task Dispose_DuringInitialize_DoesNotFaultActiveInitialization()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cb-init-" + Guid.NewGuid().ToString("N") + ".db");
+        LocalDb db = new LocalDb(new FileInfo(path));
+
+        Task initialize = db.InitializeAsync();
+        db.Dispose();
+
+        Func<Task> act = () => initialize;
+        await act.Should().NotThrowAsync();
+    }
 }

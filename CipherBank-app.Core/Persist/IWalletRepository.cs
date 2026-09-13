@@ -11,17 +11,17 @@ public interface IWalletRepository
     /// Lists on-device wallet rows (address/path metadata, not key material).
     /// Use: High (home / receive). Scope: IWalletRepository consumers.
     /// </summary>
-    Task<IReadOnlyList<LocalWalletRow>> ListAsync();
+    Task<IReadOnlyList<LocalWalletRow>> ListAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Inserts or replaces a wallet row by id.
     /// Use: High (wallet create). Scope: IWalletRepository consumers.
     /// </summary>
-    Task UpsertAsync(LocalWalletRow row);
+    Task UpsertAsync(LocalWalletRow row, CancellationToken ct = default);
 
     /// <summary>
     /// Deletes the wallet with <paramref name="id"/> when it exists.
     /// Use: Medium (wallet editor). Scope: IWalletRepository consumers.
     /// </summary>
-    Task DeleteAsync(string id);
+    Task DeleteAsync(string id, CancellationToken ct = default);
 }

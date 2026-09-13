@@ -103,9 +103,9 @@ public class PrefsSyncAndStreamTests
     {
         public UserPrefs Current { get; set; } = new();
 
-        public Task<UserPrefs> LoadAsync() => Task.FromResult(Current);
+        public Task<UserPrefs> LoadAsync(CancellationToken ct = default) => Task.FromResult(Current);
 
-        public Task SaveAsync(UserPrefs prefs)
+        public Task SaveAsync(UserPrefs prefs, CancellationToken ct = default)
         {
             Current = prefs;
             return Task.CompletedTask;

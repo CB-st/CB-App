@@ -21,7 +21,7 @@ public class SyncJobSchedulerTests
         TaskCompletionSource gate1 = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource gate2 = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        queue.Enqueue("p2-a", SyncPriority.P2, async ct =>
+        _ = queue.EnqueueAsync("p2-a", SyncPriority.P2, async ct =>
         {
             lock (order)
             {
@@ -34,7 +34,7 @@ public class SyncJobSchedulerTests
                 order.Add("p2-a-end");
             }
         });
-        queue.Enqueue("p2-b", SyncPriority.P2, async ct =>
+        _ = queue.EnqueueAsync("p2-b", SyncPriority.P2, async ct =>
         {
             lock (order)
             {
@@ -56,7 +56,7 @@ public class SyncJobSchedulerTests
             }
         });
 
-        queue.Enqueue("p2-c", SyncPriority.P2, async ct =>
+        _ = queue.EnqueueAsync("p2-c", SyncPriority.P2, async ct =>
         {
             lock (order)
             {
@@ -69,7 +69,7 @@ public class SyncJobSchedulerTests
                 order.Add("p2-c-end");
             }
         });
-        queue.Enqueue("p1-d", SyncPriority.P1, async ct =>
+        _ = queue.EnqueueAsync("p1-d", SyncPriority.P1, async ct =>
         {
             lock (order)
             {
@@ -108,7 +108,7 @@ public class SyncJobSchedulerTests
         int runCount = 0;
         TaskCompletionSource gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        queue.Enqueue("btc", SyncPriority.P1, async ct =>
+        Task first = queue.EnqueueAsync("btc", SyncPriority.P1, async ct =>
         {
             Interlocked.Increment(ref runCount);
             await gate.Task.WaitAsync(ct);
@@ -116,12 +116,13 @@ public class SyncJobSchedulerTests
 
         await WaitUntilAsync(() => Volatile.Read(ref runCount) == 1);
 
-        queue.Enqueue("btc", SyncPriority.P1, async ct =>
+        Task duplicate = queue.EnqueueAsync("btc", SyncPriority.P1, async ct =>
         {
             Interlocked.Increment(ref runCount);
             await Task.CompletedTask;
         });
 
+        duplicate.Should().BeSameAs(first);
         gate.SetResult();
         await queue.DrainAsync(default);
 
@@ -137,7 +138,7 @@ public class SyncJobSchedulerTests
             new SyncSchedulerOptions { MaxConcurrency = 1 });
         int runs = 0;
 
-        queue.Enqueue("btc", SyncPriority.P1, _ =>
+        _ = queue.EnqueueAsync("btc", SyncPriority.P1, _ =>
         {
             runs++;
             return Task.CompletedTask;
@@ -146,6 +147,60 @@ public class SyncJobSchedulerTests
 
         runs.Should().Be(1);
         taskScheduler.QueuedTasks.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_FaultedWork_ExposesFailureAndAllowsReenqueue()
+    {
+        SyncJobScheduler queue = new SyncJobScheduler();
+
+        Task failed = queue.EnqueueAsync(
+            "btc",
+            SyncPriority.P1,
+            _ => throw new NotSupportedException("quote failed"));
+
+        Func<Task> observeFailure = () => failed;
+        await observeFailure.Should().ThrowAsync<NotSupportedException>();
+
+        Task retry = queue.EnqueueAsync("btc", SyncPriority.P1, _ => Task.CompletedTask);
+        await retry;
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_CallerCancellation_ReachesQueuedWork()
+    {
+        SyncJobScheduler queue = new SyncJobScheduler(
+            TaskScheduler.Default,
+            new SyncSchedulerOptions { MaxConcurrency = 1 });
+        TaskCompletionSource blocker = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _ = queue.EnqueueAsync("blocker", SyncPriority.P1, ct => blocker.Task.WaitAsync(ct));
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+        Task canceled = queue.EnqueueAsync(
+            "queued",
+            SyncPriority.P2,
+            async ct => await Task.Delay(Timeout.InfiniteTimeSpan, ct),
+            cancellation.Token);
+
+        await cancellation.CancelAsync();
+        blocker.SetResult();
+
+        Func<Task> observeCancellation = () => canceled;
+        await observeCancellation.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Dispose_CancelsRunningWork()
+    {
+        SyncJobScheduler queue = new SyncJobScheduler();
+        Task started = queue.EnqueueAsync(
+            "running",
+            SyncPriority.P1,
+            async ct => await Task.Delay(Timeout.InfiniteTimeSpan, ct));
+
+        queue.Dispose();
+
+        Func<Task> observeCancellation = () => started;
+        await observeCancellation.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]

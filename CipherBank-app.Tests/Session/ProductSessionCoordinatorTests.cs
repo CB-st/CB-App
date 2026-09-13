@@ -92,4 +92,44 @@ public class ProductSessionCoordinatorTests
         hub.Verify(h => h.Start(), Times.Once);
         hub.Verify(h => h.StopStreaming(), Times.Once);
     }
+
+    [Fact]
+    public async Task StartAsync_CanceledRefresh_RollsBackSessionAndPropagatesCancellation()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cb-sess-" + Guid.NewGuid().ToString("N") + ".db");
+        PrefsStore prefs = new PrefsStore(new LocalDb(new FileInfo(path)));
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+        Mock<IProductClient> client = new Mock<IProductClient>(MockBehavior.Strict);
+        client.Setup(c => c.CreateSessionAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SessionDto { AccessToken = "tok", RefreshToken = "ref" });
+        Mock<IStreamService> stream = new Mock<IStreamService>(MockBehavior.Strict);
+        stream.Setup(s => s.ConnectAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        stream.Setup(s => s.DisconnectAsync()).Returns(Task.CompletedTask);
+        Mock<IStreamHub> hub = new Mock<IStreamHub>(MockBehavior.Strict);
+        hub.Setup(h => h.Start());
+        hub.Setup(h => h.StopStreaming());
+        Mock<IPrefsSyncService> prefsSync = new Mock<IPrefsSyncService>(MockBehavior.Strict);
+        prefsSync.Setup(p => p.PullMergeAsync(It.IsAny<CancellationToken>()))
+            .Returns<CancellationToken>(async ct =>
+            {
+                await cancellation.CancelAsync();
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            });
+        InMemoryProductSessionStore sessions = new InMemoryProductSessionStore();
+        ProductSessionCoordinator coordinator = new ProductSessionCoordinator(
+            client.Object,
+            stream.Object,
+            hub.Object,
+            prefs,
+            prefsSync.Object,
+            Mock.Of<IAccountBootstrapService>(),
+            sessions);
+
+        Func<Task> act = () => coordinator.StartAsync(false, cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        (await sessions.GetAsync()).Should().BeNull();
+        hub.Verify(h => h.StopStreaming(), Times.Once);
+        stream.Verify(s => s.DisconnectAsync(), Times.Once);
+    }
 }

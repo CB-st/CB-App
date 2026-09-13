@@ -63,6 +63,18 @@ public static class CipherBankDiagnostics
         isEnabledByDefault: true,
         customTags: WellKnownDiagnosticTags.CompilationEnd);
 
+    /// <summary>
+    /// Describes CB1005.
+    /// Use: High (MAUI compilation). Scope: ViewModel C# trees.
+    /// </summary>
+    public static readonly DiagnosticDescriptor ViewModelPlatformGlobal = new(
+        "CB1005",
+        "ViewModels must use injected platform ports",
+        "Platform global '{0}' is not allowed in a ViewModel; inject a focused port",
+        Category,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     /// <summary>Gets the analyzer diagnostic category.</summary>
     public static string Category => "CipherBank.Structure";
 }

@@ -23,6 +23,7 @@ dotnet build CipherBank-app/CipherBank-app.csproj -f net10.0-android
 | --- | --- |
 | [../AGENTS.md](../AGENTS.md) | Repository architecture, coding, security, UI, and verification contract |
 | [architecture.md](architecture.md) | Architecture, data flow, security, and HTTP pipeline |
+| [agentic/MODULE_COMPOSITION.md](agentic/MODULE_COMPOSITION.md) | Explicit feature registration and ViewModel/platform boundaries |
 | [style/README.md](style/README.md) | Typography, semantic color, components, layout, and accessibility |
 | [BUILD_LOG.md](BUILD_LOG.md) | Prototype layer map and implementation history |
 | [MAUI_FUNCTION_REF.md](MAUI_FUNCTION_REF.md) | MAUI/Core/ChallengePass function map |

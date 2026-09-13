@@ -26,6 +26,7 @@ Dependencies point inward: MAUI may depend on Core; Core never depends on MAUI. 
 5. Routine database work uses `CipherBankDbContext` and EF Core. Schema changes are a new EF migration plus a previous-migration upgrade test. Production code does not own SQL command text. Unmatched prototype SQLite files (no `__EFMigrationsHistory`) are wiped, not repaired.
 6. Prefer framework facilities (`ArgumentNullException.ThrowIfNull`, `TimeProvider`, spans, options validation) over local substitutes.
 7. One primary type per C# file. The filename matches the primary type.
+8. Non-trivial vertical slices expose one explicit `Add<Feature>Feature` registration extension at the MAUI composition root. ViewModels use injected ports rather than MAUI globals.
 
 ## Quality and Sonar
 

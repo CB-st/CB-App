@@ -20,16 +20,16 @@ public sealed class PrefsStore : IPrefsStore
     }
 
     /// <inheritdoc />
-    public async Task<UserPrefs> LoadAsync()
+    public async Task<UserPrefs> LoadAsync(CancellationToken ct = default)
     {
-        CipherBankDbContext context = await _db.CreateContextAsync().ConfigureAwait(false);
+        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
         {
             string? json = await context.Preferences
                 .AsNoTracking()
                 .Where(entity => entity.Key == Key)
                 .Select(entity => entity.Value)
-                .SingleOrDefaultAsync()
+                .SingleOrDefaultAsync(ct)
                 .ConfigureAwait(false);
             UserPrefs prefs = DeserializePrefs(json);
             prefs.NormalizeHomeSections();
@@ -55,20 +55,20 @@ public sealed class PrefsStore : IPrefsStore
     }
 
     /// <inheritdoc />
-    public Task SaveAsync(UserPrefs prefs)
+    public Task SaveAsync(UserPrefs prefs, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(prefs);
         prefs.NormalizeHomeSections();
-        return SaveCoreAsync(prefs);
+        return SaveCoreAsync(prefs, ct);
     }
 
-    private async Task SaveCoreAsync(UserPrefs prefs)
+    private async Task SaveCoreAsync(UserPrefs prefs, CancellationToken ct)
     {
         string json = JsonSerializer.Serialize(prefs);
-        CipherBankDbContext context = await _db.CreateContextAsync().ConfigureAwait(false);
+        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
         {
-            PreferenceEntity? entity = await context.Preferences.FindAsync(Key).ConfigureAwait(false);
+            PreferenceEntity? entity = await context.Preferences.FindAsync([Key], ct).ConfigureAwait(false);
             if (entity is null)
             {
                 context.Preferences.Add(new PreferenceEntity { Key = Key, Value = json });
@@ -78,7 +78,7 @@ public sealed class PrefsStore : IPrefsStore
                 entity.Value = json;
             }
 
-            await context.SaveChangesAsync().ConfigureAwait(false);
+            await context.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }
 }

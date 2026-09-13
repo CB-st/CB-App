@@ -128,9 +128,9 @@ public class AccountBootstrapServiceTests
     {
         public UserPrefs Current { get; set; } = new();
 
-        public Task<UserPrefs> LoadAsync() => Task.FromResult(Current);
+        public Task<UserPrefs> LoadAsync(CancellationToken ct = default) => Task.FromResult(Current);
 
-        public Task SaveAsync(UserPrefs prefs)
+        public Task SaveAsync(UserPrefs prefs, CancellationToken ct = default)
         {
             Current = prefs;
             return Task.CompletedTask;
@@ -141,24 +141,22 @@ public class AccountBootstrapServiceTests
     {
         public List<AchRecipientRow> Rows { get; } = [];
 
-        public Task EnsureSchemaAsync() => Task.CompletedTask;
+        public Task EnsureSchemaAsync(CancellationToken ct = default) => Task.CompletedTask;
 
-        public Task<IReadOnlyList<AchRecipientRow>> ListAsync()
+        public Task<IReadOnlyList<AchRecipientRow>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<AchRecipientRow>>(Rows);
 
-        public Task UpsertAsync(AchRecipientRow row)
+        public Task UpsertAsync(AchRecipientRow row, CancellationToken ct = default)
         {
             Rows.RemoveAll(r => r.Id == row.Id);
             Rows.Add(row);
             return Task.CompletedTask;
         }
 
-        public Task DeleteAsync(string id)
+        public Task DeleteAsync(string id, CancellationToken ct = default)
         {
             Rows.RemoveAll(r => r.Id == id);
             return Task.CompletedTask;
         }
-
-        public Task SeedDefaultsIfEmptyAsync() => Task.CompletedTask;
     }
 }
