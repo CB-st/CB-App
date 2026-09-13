@@ -40,18 +40,17 @@ public sealed class PrefsStore : IPrefsStore
 
         static UserPrefs DeserializePrefs(string? payload)
         {
-            if (string.IsNullOrWhiteSpace(payload))
-            {
-                return new UserPrefs();
-            }
-
             try
             {
-                return JsonSerializer.Deserialize<UserPrefs>(payload) ?? new UserPrefs();
+                // Missing, blank, or malformed stored payloads converge on normalized defaults
+                // (blank input throws JsonException); repository I/O and cancellation propagate.
+                return payload is null
+                    ? new()
+                    : JsonSerializer.Deserialize<UserPrefs>(payload) ?? new();
             }
             catch (JsonException)
             {
-                return new UserPrefs();
+                return new();
             }
         }
     }

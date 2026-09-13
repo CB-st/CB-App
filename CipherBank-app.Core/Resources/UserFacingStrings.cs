@@ -1,4 +1,4 @@
-// <copyright file="Strings.cs" company="CipherBank">
+// <copyright file="UserFacingStrings.cs" company="CipherBank">
 // Copyright (c) CipherBank. Licensed under the BSD 3-Clause License.
 // </copyright>
 
@@ -7,11 +7,15 @@ using System.Resources;
 
 namespace CipherBank_app.Resources;
 
-/// <summary>Strongly-typed access to Core user-facing strings (S4055 ResourceManager).</summary>
-public static class Strings
+/// <summary>
+/// Strongly-typed access to Core user-facing, localizable product copy (S4055
+/// ResourceManager). Owns user-facing strings only: startup validation diagnostics are
+/// configuration-owned and live in <c>ConfigurationValidationMessages</c>.
+/// </summary>
+public static class UserFacingStrings
 {
     private static readonly ResourceManager Manager =
-        new(typeof(Strings).FullName!, typeof(Strings).Assembly);
+        new(typeof(UserFacingStrings).FullName!, typeof(UserFacingStrings).Assembly);
 
     public static string AchEnterPayeeName => Get(nameof(AchEnterPayeeName));
 

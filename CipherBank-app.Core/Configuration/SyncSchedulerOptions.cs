@@ -5,7 +5,7 @@
 namespace CipherBank_app.Configuration;
 
 /// <summary>Bounded dispatch settings for synchronization work.</summary>
-public sealed class SyncSchedulerOptions
+public sealed class SyncSchedulerOptions : IOptionsSection
 {
     /// <summary>Lower inclusive concurrency bound for validation and derived defaults.</summary>
     public static int MinConcurrency { get; } = 1;
