@@ -107,11 +107,14 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
     }
 
     /// <summary>
-    /// Cancels queued and running jobs during container shutdown.
+    /// Cancels running jobs and completes queued-but-unstarted jobs as canceled during
+    /// container shutdown. No queued delegate starts after disposal; running jobs finish
+    /// under their canceled linked token.
     /// Use: Low (container shutdown). Scope: process-wide scheduler.
     /// </summary>
     public void Dispose()
     {
+        List<QueuedJob> abandoned;
         lock (_gate)
         {
             if (_disposed)
@@ -120,8 +123,24 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
             }
 
             _disposed = true;
+
+            // Drain before canceling so a completion-time dispatch cannot start queued work.
+            abandoned = new List<QueuedJob>(_queue.Count);
+            while (_queue.Count > 0)
+            {
+                QueuedJob job = _queue.Dequeue();
+                abandoned.Add(job);
+                _jobs.Remove(job.Key);
+            }
+
             _shutdown.Cancel();
             _shutdown.Dispose();
+        }
+
+        foreach (QueuedJob job in abandoned)
+        {
+            job.Completion.TrySetCanceled();
+            job.Cancellation.Dispose();
         }
     }
 
@@ -132,6 +151,13 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
     /// </summary>
     private void DispatchEligibleLocked()
     {
+        // A running job can complete after Dispose; its completion callback must not
+        // start work on a disposed scheduler.
+        if (_disposed)
+        {
+            return;
+        }
+
         while (_running < _maxConcurrency && _queue.Count > 0)
         {
             QueuedJob job = _queue.Dequeue();

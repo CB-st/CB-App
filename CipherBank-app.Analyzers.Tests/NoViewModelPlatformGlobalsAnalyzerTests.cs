@@ -11,10 +11,14 @@ namespace CipherBank_app.Analyzers.Tests;
 public sealed class NoViewModelPlatformGlobalsAnalyzerTests
 {
     [Theory]
-    [InlineData("Preferences.Get(\"theme\", \"system\")")]
-    [InlineData("Shell.Current.GoToAsync(\"//home\")")]
-    [InlineData("Task.Run(() => 1)")]
-    public async Task ReportsPlatformGlobalFromViewModel(string expression)
+    [InlineData("_ = {|CB1005:Preferences.Get|}(\"theme\", \"system\");")]
+    [InlineData("_ = {|CB1005:Shell.Current|}.GoToAsync(\"//home\");")]
+    [InlineData("_ = {|CB1005:Task.Run|}(() => 1);")]
+    [InlineData("_ = {|CB1005:Application.Current|};")]
+    [InlineData("{|CB1005:Application.Current|}.UserAppTheme = 1;")]
+    [InlineData("_ = {|CB1005:MainThread.IsMainThread|};")]
+    [InlineData("_ = {|CB1005:SecureStorage.Default|};")]
+    public async Task ReportsPlatformGlobalFromViewModel(string statement)
     {
         CSharpAnalyzerTest<NoViewModelPlatformGlobalsAnalyzer, DefaultVerifier> test = new()
         {
@@ -28,7 +32,7 @@ public sealed class NoViewModelPlatformGlobalsAnalyzerTests
                         {
                             void Execute()
                             {
-                                _ = {|CB1005:{{expression}}|};
+                                {{statement}}
                             }
                         }
                         """),
@@ -77,6 +81,73 @@ public sealed class NoViewModelPlatformGlobalsAnalyzerTests
                         {
                             object Tick(System.Threading.CancellationToken token)
                                 => Task.Delay(1000, token);
+                        }
+                        """),
+                },
+            },
+        };
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task ReportsPlatformGlobalFromViewModelAdditionalFile()
+    {
+        // CI structure builds compile only Core/Tests/Analyzers; the MAUI host
+        // arrives as AdditionalFiles, so CB1005 must also scan that surface.
+        CSharpAnalyzerTest<NoViewModelPlatformGlobalsAnalyzer, DefaultVerifier> test = new()
+        {
+            CompilerDiagnostics = CompilerDiagnostics.None,
+            TestCode = "class Anchor { }",
+            TestState =
+            {
+                AdditionalFiles =
+                {
+                    ("CipherBank-app/ViewModels/SettingsViewModel.cs", """
+                        class SettingsViewModel
+                        {
+                            void Apply()
+                            {
+                                {|CB1005:Application.Current|}.UserAppTheme = 1;
+                            }
+                        }
+                        """),
+                    ("CipherBank-app/Services/PreferenceStore.cs", """
+                        class PreferenceStore
+                        {
+                            object Read() => Preferences.Get("theme", "system");
+                        }
+                        """),
+                },
+            },
+        };
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task DoesNotDoubleReportWhenAdditionalFileIsCompilationTree()
+    {
+        CSharpAnalyzerTest<NoViewModelPlatformGlobalsAnalyzer, DefaultVerifier> test = new()
+        {
+            CompilerDiagnostics = CompilerDiagnostics.None,
+            TestState =
+            {
+                Sources =
+                {
+                    ("CipherBank-app/ViewModels/HomeViewModel.cs", """
+                        class HomeViewModel
+                        {
+                            void Execute() => _ = {|CB1005:Task.Run|}(() => 1);
+                        }
+                        """),
+                },
+                AdditionalFiles =
+                {
+                    ("CipherBank-app/ViewModels/HomeViewModel.cs", """
+                        class HomeViewModel
+                        {
+                            void Execute() => _ = Task.Run(() => 1);
                         }
                         """),
                 },

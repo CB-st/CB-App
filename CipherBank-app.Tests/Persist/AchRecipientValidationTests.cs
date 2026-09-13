@@ -48,5 +48,26 @@ public class AchRecipientValidationTests
     }
 
     [Fact]
+    public void Validate_RejectsUnicodeDigitRouting()
+    {
+        // Arabic-Indic characters are Unicode decimal digits but not the supported
+        // ASCII 0-9 wire format for ABA routing numbers.
+        AchRecipientValidation.Validate(
+            "Rent LLC",
+            "Jane Doe",
+            "Demo Bank",
+            "٠٢١٠٠٠٠٢١",
+            "12345678",
+            "checking").Should().Contain("9 digits");
+    }
+
+    [Fact]
+    public void MaskRouting_IgnoresUnicodeDigits()
+    {
+        // Only ASCII digits count toward the visible trailing mask.
+        AchRecipientValidation.MaskRouting("٠٢١٠٠٠٠٢١").Should().Be("••••");
+    }
+
+    [Fact]
     public void MaskAccount_KeepsLastFour() => AchRecipientValidation.MaskAccount("88210001").Should().Be("•••• 0001");
 }

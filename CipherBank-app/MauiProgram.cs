@@ -127,6 +127,9 @@ public static class MauiProgram
         mauiAppBuilder.Services.AddSingleton<INavigationService, ShellNavigationService>();
         mauiAppBuilder.Services.AddSingleton<IDialogService, ShellDialogService>();
 
+        // Theme port keeps Application.Current out of ViewModels (CB1005).
+        mauiAppBuilder.Services.AddSingleton<IAppThemeSetter, MauiAppThemeSetter>();
+
         // Health check client (for Settings Test Connection)
         mauiAppBuilder.Services.AddHealthCheckClient();
 
