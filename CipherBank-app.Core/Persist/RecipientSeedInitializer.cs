@@ -35,7 +35,10 @@ public sealed class RecipientSeedInitializer : IRecipientSeedInitializer
     }
 
     /// <inheritdoc />
-    public async Task InitializeAsync(CancellationToken ct = default)
+    public Task InitializeAsync() => InitializeAsync(CancellationToken.None);
+
+    /// <inheritdoc />
+    public async Task InitializeAsync(CancellationToken ct)
     {
         if (_options.DefaultRecipients.Count == 0)
         {
