@@ -10,9 +10,6 @@ public interface ILocalDb
     /// <summary>Gets the on-disk SQLite path for this database instance (SQLite DataSource).</summary>
     string Path { get; }
 
-    /// <summary>Gets the database file as a <see cref="FileInfo"/>.</summary>
-    FileInfo DatabaseFile { get; }
-
     /// <summary>
     /// Applies pending EF migrations on first open without caller cancellation.
     /// Use: High (app start / first persist call). Scope: ILocalDb consumers.
