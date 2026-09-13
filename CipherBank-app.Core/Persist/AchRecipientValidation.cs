@@ -43,9 +43,9 @@ public static class AchRecipientValidation
     {
         string?[] errors =
         [
-            RequireNonBlank(name, Strings.AchEnterPayeeName),
-            RequireNonBlank(holder, Strings.AchEnterAccountHolderName),
-            RequireNonBlank(bank, Strings.AchEnterBankName),
+            RequireNonBlank(name, UserFacingStrings.AchEnterPayeeName),
+            RequireNonBlank(holder, UserFacingStrings.AchEnterAccountHolderName),
+            RequireNonBlank(bank, UserFacingStrings.AchEnterBankName),
             ValidateRouting(routing),
             ValidateAccount(account),
             ValidateAccountType(accountType),
@@ -93,7 +93,7 @@ public static class AchRecipientValidation
             && trimmed.All(char.IsAsciiDigit);
         return exactDigits
             ? null
-            : Strings.AchRoutingNumberMustBeDigits(RoutingNumberDigitCount);
+            : UserFacingStrings.AchRoutingNumberMustBeDigits(RoutingNumberDigitCount);
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public static class AchRecipientValidation
     /// </summary>
     private static string? ValidateAccount(string account)
         => string.IsNullOrWhiteSpace(account) || account.Trim().Length < AccountNumberMinDigits
-            ? Strings.AchEnterValidAccountNumber
+            ? UserFacingStrings.AchEnterValidAccountNumber
             : null;
 
     /// <summary>
@@ -114,7 +114,7 @@ public static class AchRecipientValidation
         string type = accountType.Trim().ToUpperInvariant();
         return type is "CHECKING" or "SAVINGS"
             ? null
-            : Strings.AchAccountTypeMustBeCheckingOrSavings;
+            : UserFacingStrings.AchAccountTypeMustBeCheckingOrSavings;
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ public static class AchRecipientValidation
     /// </summary>
     private static string? ValidateMemo(string? memo)
         => memo is not null && memo.Length > MemoMaxLength
-            ? Strings.AchMemoMustBeMaxLength(MemoMaxLength)
+            ? UserFacingStrings.AchMemoMustBeMaxLength(MemoMaxLength)
             : null;
 
     /// <summary>
