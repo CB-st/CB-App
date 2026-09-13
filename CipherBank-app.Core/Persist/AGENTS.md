@@ -46,9 +46,10 @@ override CI Sonar: new issues on Persist code still fail the gate.
   orders waiting work P1-before-P2, and the whole async job counts against
   the concurrency cap. It does not inherit `TaskScheduler` because a
   scheduler subclass caps only synchronous segments — an async job frees its
-  scheduler slot at the first await — and cannot express keyed
-  skip-duplicates. `DrainAsync` lives on the concrete type only (tests /
-  shutdown), not on `ISyncJobScheduler`.
+  scheduler slot at the first await — and cannot express keyed completion.
+  Duplicate submissions share the accepted job's completion task. Caller and
+  shutdown cancellation reach queued/running work; failures remain observable
+  through `EnqueueAsync` and `DrainAsync`.
 - ACH digit counts are `const` (Sonar S3962). Public names stay PascalCase.
 - Design-time `IDesignTimeDbContextFactory.CreateDbContext(string[] args)`
   keeps `args` (dotnet ef passes an empty array) and does not parse custom
