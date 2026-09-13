@@ -63,6 +63,13 @@ public sealed class NoViewModelPlatformGlobalsAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        if (string.Equals(root, "Task", StringComparison.Ordinal)
+            && invocation.Expression is MemberAccessExpressionSyntax taskMember
+            && !string.Equals(taskMember.Name.Identifier.ValueText, "Run", StringComparison.Ordinal))
+        {
+            return;
+        }
+
         context.ReportDiagnostic(Diagnostic.Create(
             CipherBankDiagnostics.ViewModelPlatformGlobal,
             invocation.GetLocation(),
