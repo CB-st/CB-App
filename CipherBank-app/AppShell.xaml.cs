@@ -32,7 +32,8 @@ public partial class AppShell : Shell
         IAppSession session,
         ILocalDb db,
         ICustodyService custody,
-        AppIdleLockService idleLock)
+        AppIdleLockService idleLock,
+        IRecipientSeedInitializer recipientSeeds)
         : this()
     {
         ApplyDiPageTemplates(services);
@@ -50,7 +51,7 @@ public partial class AppShell : Shell
                 return;
             }
 
-            _ = BootstrapAsync(session, db, custody, idleLock);
+            _ = BootstrapAsync(session, db, custody, idleLock, recipientSeeds);
         }
 
         void OnLoaded(object? sender, EventArgs e)
@@ -92,16 +93,18 @@ public partial class AppShell : Shell
         => new(() => services.GetRequiredService<TPage>());
 
     /// <summary>
-    /// Boots local DB / session, then routes to Unlock or Welcome after splash.
+    /// Boots local DB / seeding / session, then routes to Unlock or Welcome after splash.
     /// Boot failures with an existing seal route to Unlock (never Welcome/create), so a mid-boot
-    /// exception cannot open an overwrite path through SetPin.
+    /// exception cannot open an overwrite path through SetPin. A failed recipient seed transaction
+    /// indicates a broken database, so it takes the same boot-failure route.
     /// Use: High (once per cold start). Scope: AppShell bootstrap.
     /// </summary>
     private static async Task BootstrapAsync(
         IAppSession session,
         ILocalDb db,
         ICustodyService custody,
-        AppIdleLockService idleLock)
+        AppIdleLockService idleLock,
+        IRecipientSeedInitializer recipientSeeds)
     {
         try
         {
@@ -110,7 +113,7 @@ public partial class AppShell : Shell
                 await Current.GoToAsync(Routes.Splash);
             });
 
-            var boot = BootSessionAsync(db, session);
+            var boot = BootSessionAsync(db, session, recipientSeeds);
             await Task.WhenAll(boot, Task.Delay(MinSplashDuration)).ConfigureAwait(false);
 
             string route = session.HasWallet ? Routes.Unlock : Routes.Welcome;
@@ -155,12 +158,18 @@ public partial class AppShell : Shell
     }
 
     /// <summary>
-    /// Initializes the local DB then boots the custody session.
+    /// Initializes the local DB, awaits recipient seeding, then boots the custody session.
+    /// Seeding completes before navigation leaves Splash, so no recipient surface can render
+    /// unseeded state; SendViewModel's idempotent initializer call remains the consumer backstop.
     /// Use: High (once per cold start). Scope: AppShell bootstrap.
     /// </summary>
-    private static async Task BootSessionAsync(ILocalDb db, IAppSession session)
+    private static async Task BootSessionAsync(
+        ILocalDb db,
+        IAppSession session,
+        IRecipientSeedInitializer recipientSeeds)
     {
         await db.InitializeAsync().ConfigureAwait(false);
+        await recipientSeeds.InitializeAsync().ConfigureAwait(false);
         await session.BootAsync().ConfigureAwait(false);
     }
 }
