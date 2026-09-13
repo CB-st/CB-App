@@ -44,4 +44,25 @@ public sealed record AchRecipientRow(
             createdAt)
     {
     }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AchRecipientRow"/> class from a persisted
+    /// entity. Routing and Account stay null: the store holds masks only, never cleartext.
+    /// Use: High (every recipient list read). Scope: RecipientRepository projections.
+    /// </summary>
+    public AchRecipientRow(Entities.RecipientEntity entity)
+        : this(
+            entity.Id,
+            entity.Name,
+            entity.Holder,
+            entity.Bank,
+            null,
+            null,
+            entity.AccountType,
+            entity.Memo,
+            entity.AccountMask,
+            entity.RoutingMask,
+            entity.CreatedAt)
+    {
+    }
 }

@@ -37,18 +37,7 @@ public sealed class RecipientRepository : IRecipientRepository
             return await context.Recipients
                 .AsNoTracking()
                 .OrderBy(entity => entity.Name)
-                .Select(entity => new AchRecipientRow(
-                    entity.Id,
-                    entity.Name,
-                    entity.Holder,
-                    entity.Bank,
-                    Routing: null,
-                    Account: null,
-                    entity.AccountType,
-                    entity.Memo,
-                    entity.AccountMask,
-                    entity.RoutingMask,
-                    entity.CreatedAt))
+                .Select(entity => new AchRecipientRow(entity))
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
         }

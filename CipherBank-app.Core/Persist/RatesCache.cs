@@ -53,11 +53,7 @@ public sealed class RatesCache : IRatesCache, IDisposable
 
             return await query
                 .OrderBy(entity => entity.Symbol)
-                .Select(entity => new RateRow(
-                    entity.Symbol,
-                    entity.Usd,
-                    entity.Change24H,
-                    entity.UpdatedAtMs))
+                .Select(entity => new RateRow(entity))
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
         }
@@ -100,10 +96,13 @@ public sealed class RatesCache : IRatesCache, IDisposable
                         context.RateSnapshots.Add(entity);
                     }
 
-                    RateSnapshotEntity target = entity!;
-                    target.Usd = row.Usd;
-                    target.Change24H = row.Change24h;
-                    target.UpdatedAtMs = row.UpdatedAtMs;
+                    // Copies the mutable columns in one call; Symbol stays insert-owned.
+                    context.Entry(entity!).CurrentValues.SetValues(new
+                    {
+                        row.Usd,
+                        Change24H = row.Change24h,
+                        row.UpdatedAtMs,
+                    });
                 }
 
                 await context.SaveChangesAsync(ct).ConfigureAwait(false);
