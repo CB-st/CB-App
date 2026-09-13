@@ -20,7 +20,9 @@ public sealed class PrefsStore : IPrefsStore
     }
 
     /// <inheritdoc />
-    public async Task<UserPrefs> LoadAsync(CancellationToken ct = default)
+    public Task<UserPrefs> LoadAsync() => LoadAsync(CancellationToken.None);
+
+    public async Task<UserPrefs> LoadAsync(CancellationToken ct)
     {
         CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
@@ -55,7 +57,9 @@ public sealed class PrefsStore : IPrefsStore
     }
 
     /// <inheritdoc />
-    public Task SaveAsync(UserPrefs prefs, CancellationToken ct = default)
+    public Task SaveAsync(UserPrefs prefs) => SaveAsync(prefs, CancellationToken.None);
+
+    public Task SaveAsync(UserPrefs prefs, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(prefs);
         prefs.NormalizeHomeSections();

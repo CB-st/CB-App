@@ -22,9 +22,14 @@ public sealed class RecipientRepository : IRecipientRepository
         _db = db;
     }
 
-    public Task EnsureSchemaAsync(CancellationToken ct = default) => _db.InitializeAsync(ct);
+    public Task EnsureSchemaAsync() => EnsureSchemaAsync(CancellationToken.None);
 
-    public async Task<IReadOnlyList<AchRecipientRow>> ListAsync(CancellationToken ct = default)
+    public Task EnsureSchemaAsync(CancellationToken ct) => _db.InitializeAsync(ct);
+
+    public Task<IReadOnlyList<AchRecipientRow>> ListAsync()
+        => ListAsync(CancellationToken.None);
+
+    public async Task<IReadOnlyList<AchRecipientRow>> ListAsync(CancellationToken ct)
     {
         CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
@@ -52,13 +57,18 @@ public sealed class RecipientRepository : IRecipientRepository
     /// <summary>
     /// Upserts payee metadata and masks only; cleartext account/routing inputs never enter the EF model.
     /// </summary>
-    public Task UpsertAsync(AchRecipientRow row, CancellationToken ct = default)
+    public Task UpsertAsync(AchRecipientRow row)
+        => UpsertAsync(row, CancellationToken.None);
+
+    public Task UpsertAsync(AchRecipientRow row, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(row);
         return UpsertCoreAsync(row, ct);
     }
 
-    public async Task DeleteAsync(string id, CancellationToken ct = default)
+    public Task DeleteAsync(string id) => DeleteAsync(id, CancellationToken.None);
+
+    public async Task DeleteAsync(string id, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
