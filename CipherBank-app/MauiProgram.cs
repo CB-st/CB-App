@@ -116,6 +116,10 @@ public static class MauiProgram
     /// </summary>
     public static MauiAppBuilder RegisterServices(this MauiAppBuilder mauiAppBuilder)
     {
+        mauiAppBuilder.Services.AddPersistenceFeature(
+            mauiAppBuilder.Configuration,
+            new DirectoryInfo(FileSystem.Current.AppDataDirectory));
+
         // Settings Service (singleton - needed first for other service configuration)
         mauiAppBuilder.Services.AddSingleton<ISettingsService, SettingsService>();
 

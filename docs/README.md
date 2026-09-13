@@ -32,6 +32,7 @@ dotnet build -f net10.0-windows10.0.19041.0 -t:Run
 | Document | Description |
 |----------|-------------|
 | [architecture.md](architecture.md) | Architecture, data flow, security, HTTP pipeline |
+| [agentic/MODULE_COMPOSITION.md](agentic/MODULE_COMPOSITION.md) | Explicit feature registration and ViewModel/platform boundaries |
 | [core/README.md](core/README.md) | Core library overview |
 | [core/models.md](core/models.md) | Core models (Wallet, Transaction, CryptoCurrency, etc.) |
 | [core/services.md](core/services.md) | Core service interfaces and utilities |
