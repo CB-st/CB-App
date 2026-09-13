@@ -26,6 +26,18 @@ public static class CipherBankDefaultsConfiguration
     public static IConfigurationRoot BuildForHost(bool isDevelopment, bool isWindows)
         => Build(isDevelopment ? "Development" : "Production", isWindows);
 
+    /// <summary>Builds repository defaults without optional overlays.</summary>
+    /// <returns>A configuration root owned by the caller.</returns>
+    public static IConfigurationRoot Build() => Build(null, false);
+
+    /// <summary>Builds repository defaults with one optional environment overlay.</summary>
+    /// <returns>A configuration root owned by the caller.</returns>
+    public static IConfigurationRoot Build(string? environment) => Build(environment, false);
+
+    /// <summary>Builds repository defaults with the optional Windows overlay.</summary>
+    /// <returns>A configuration root owned by the caller.</returns>
+    public static IConfigurationRoot Build(bool windowsOverlay) => Build(null, windowsOverlay);
+
     /// <summary>
     /// Builds the default configuration, then optionally merges environment and Windows overlays.
     /// Use: High. Scope: host and test composition of embedded options.
@@ -34,8 +46,8 @@ public static class CipherBankDefaultsConfiguration
     /// <param name="windowsOverlay">Whether to merge Windows defaults after the environment.</param>
     /// <returns>A configuration root owned by the caller.</returns>
     public static IConfigurationRoot Build(
-        string? environment = null,
-        bool windowsOverlay = false)
+        string? environment,
+        bool windowsOverlay)
     {
         Assembly assembly = typeof(CipherBankDefaultsConfiguration).Assembly;
         ConfigurationBuilder builder = new ConfigurationBuilder();

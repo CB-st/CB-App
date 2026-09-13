@@ -34,11 +34,28 @@ public sealed class MarketRateHydrator
     /// Reuses a complete fresh snapshot or refreshes all requested symbols.
     /// Use: High (home rates). Scope: process-wide market data.
     /// </summary>
-    public async Task HydrateAndRefreshAsync(
+    public Task HydrateAndRefreshAsync(
         IEnumerable<string> symbols,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(symbols);
+        return HydrateAndRefreshCoreAsync(symbols, ct);
+    }
+
+    private static bool IsFresh(RateRow row, DateTimeOffset now)
+    {
+        DateTimeOffset updatedAt = DateTimeOffset.FromUnixTimeMilliseconds(row.UpdatedAtMs);
+        return updatedAt <= now && now - updatedAt <= MaxRateAge;
+    }
+
+    /// <summary>
+    /// Performs cache freshness evaluation and remote hydration after synchronous validation.
+    /// Use: High (home rates). Scope: process-wide market data.
+    /// </summary>
+    private async Task HydrateAndRefreshCoreAsync(
+        IEnumerable<string> symbols,
+        CancellationToken ct)
+    {
         DateTimeOffset now = _timeProvider.GetUtcNow();
         string[] requestedSymbols = symbols
             .Where(symbol => !string.IsNullOrWhiteSpace(symbol))
@@ -70,11 +87,5 @@ public sealed class MarketRateHydrator
         }
 
         await _cache.UpsertAsync(refreshedRows, ct).ConfigureAwait(false);
-    }
-
-    private static bool IsFresh(RateRow row, DateTimeOffset now)
-    {
-        DateTimeOffset updatedAt = DateTimeOffset.FromUnixTimeMilliseconds(row.UpdatedAtMs);
-        return updatedAt <= now && now - updatedAt <= MaxRateAge;
     }
 }
