@@ -4,8 +4,6 @@
 
 using Microsoft.EntityFrameworkCore.Migrations;
 
-#nullable disable
-
 namespace CipherBank_app.Persist.Migrations;
 
 /// <inheritdoc />
