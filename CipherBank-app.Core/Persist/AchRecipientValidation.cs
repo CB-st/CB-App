@@ -47,8 +47,9 @@ public static class AchRecipientValidation
     }
 
     /// <summary>
-    /// Validates ACH payee fields and returns every user-facing error, in stable field order:
-    /// name, holder, bank, routing, account, account type, memo. Empty when valid.
+    /// Validates ACH payee fields and returns every user-facing error message, in stable field
+    /// order: name, holder, bank, routing, account, account type, memo. Empty when valid.
+    /// Message projection of <see cref="ValidateDetailed"/> for list-only consumers.
     /// Use: High (recipient form submit). Scope: RecipientPicker / Persist callers.
     /// </summary>
     public static IReadOnlyList<string> ValidateAll(
@@ -59,18 +60,35 @@ public static class AchRecipientValidation
         string account,
         string accountType,
         string? memo)
+        => [.. ValidateDetailed(name, holder, bank, routing, account, accountType, memo)
+            .Select(static e => e.Message)];
+
+    /// <summary>
+    /// Validates ACH payee fields and returns every failure with its owning field, in stable
+    /// field order: name, holder, bank, routing, account, account type, memo. Empty when valid.
+    /// Consumers can attach each error to its input and render the complete list.
+    /// Use: High (recipient form submit). Scope: RecipientPicker / Persist callers.
+    /// </summary>
+    public static IReadOnlyList<AchValidationError> ValidateDetailed(
+        string name,
+        string holder,
+        string bank,
+        string routing,
+        string account,
+        string accountType,
+        string? memo)
     {
-        string?[] errors =
+        AchValidationError?[] findings =
         [
-            RequireNonBlank(name, UserFacingStrings.AchEnterPayeeName),
-            RequireNonBlank(holder, UserFacingStrings.AchEnterAccountHolderName),
-            RequireNonBlank(bank, UserFacingStrings.AchEnterBankName),
-            ValidateRouting(routing),
-            ValidateAccount(account),
-            ValidateAccountType(accountType),
-            ValidateMemo(memo),
+            Finding(AchRecipientField.Name, RequireNonBlank(name, UserFacingStrings.AchEnterPayeeName)),
+            Finding(AchRecipientField.Holder, RequireNonBlank(holder, UserFacingStrings.AchEnterAccountHolderName)),
+            Finding(AchRecipientField.Bank, RequireNonBlank(bank, UserFacingStrings.AchEnterBankName)),
+            Finding(AchRecipientField.Routing, ValidateRouting(routing)),
+            Finding(AchRecipientField.Account, ValidateAccount(account)),
+            Finding(AchRecipientField.AccountType, ValidateAccountType(accountType)),
+            Finding(AchRecipientField.Memo, ValidateMemo(memo)),
         ];
-        return [.. errors.Where(static e => e is not null)!];
+        return [.. findings.Where(static f => f is not null)!];
     }
 
     /// <summary>
@@ -98,6 +116,13 @@ public static class AchRecipientValidation
     /// </summary>
     private static string? RequireNonBlank(string value, string message)
         => string.IsNullOrWhiteSpace(value) ? message : null;
+
+    /// <summary>
+    /// Pairs a field with its error message, or null when the field validated clean.
+    /// Use: High (ValidateDetailed). Scope: this helper.
+    /// </summary>
+    private static AchValidationError? Finding(AchRecipientField field, string? message)
+        => message is null ? null : new AchValidationError(field, message);
 
     /// <summary>
     /// Ensures routing is exactly <see cref="RoutingNumberDigitCount"/> ASCII digits.
