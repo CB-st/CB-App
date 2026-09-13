@@ -139,7 +139,9 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
 
         foreach (QueuedJob job in abandoned)
         {
-            job.Completion.TrySetCanceled();
+            // The linked token is already canceled by the shutdown source above, so the
+            // completion carries the same cancellation cause callers observe elsewhere.
+            job.Completion.TrySetCanceled(job.Cancellation.Token);
             job.Cancellation.Dispose();
         }
     }
