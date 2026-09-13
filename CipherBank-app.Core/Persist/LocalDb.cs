@@ -37,7 +37,9 @@ public sealed class LocalDb : ILocalDb, IAsyncDisposable, IDisposable
     /// Applies EF Core migrations. Prototype SQLite files without a migration history are deleted first.
     /// Use: Medium (startup). Scope: LocalDb.
     /// </summary>
-    public async Task InitializeAsync(CancellationToken ct = default)
+    public Task InitializeAsync() => InitializeAsync(CancellationToken.None);
+
+    public async Task InitializeAsync(CancellationToken ct)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -71,7 +73,10 @@ public sealed class LocalDb : ILocalDb, IAsyncDisposable, IDisposable
         }
     }
 
-    public async ValueTask<CipherBankDbContext> CreateContextAsync(CancellationToken ct = default)
+    public ValueTask<CipherBankDbContext> CreateContextAsync()
+        => CreateContextAsync(CancellationToken.None);
+
+    public async ValueTask<CipherBankDbContext> CreateContextAsync(CancellationToken ct)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         await InitializeAsync(ct).ConfigureAwait(false);

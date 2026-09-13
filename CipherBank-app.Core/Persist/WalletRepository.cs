@@ -17,7 +17,10 @@ public sealed class WalletRepository : IWalletRepository
         _db = db;
     }
 
-    public async Task<IReadOnlyList<LocalWalletRow>> ListAsync(CancellationToken ct = default)
+    public Task<IReadOnlyList<LocalWalletRow>> ListAsync()
+        => ListAsync(CancellationToken.None);
+
+    public async Task<IReadOnlyList<LocalWalletRow>> ListAsync(CancellationToken ct)
     {
         CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
@@ -39,13 +42,18 @@ public sealed class WalletRepository : IWalletRepository
         }
     }
 
-    public Task UpsertAsync(LocalWalletRow row, CancellationToken ct = default)
+    public Task UpsertAsync(LocalWalletRow row)
+        => UpsertAsync(row, CancellationToken.None);
+
+    public Task UpsertAsync(LocalWalletRow row, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(row);
         return UpsertCoreAsync(row, ct);
     }
 
-    public async Task DeleteAsync(string id, CancellationToken ct = default)
+    public Task DeleteAsync(string id) => DeleteAsync(id, CancellationToken.None);
+
+    public async Task DeleteAsync(string id, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
