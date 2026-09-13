@@ -53,6 +53,13 @@ public partial class SendViewModel : ObservableObject
 
     public ObservableCollection<string> AccountTypes { get; } = new() { "checking", "savings" };
 
+    /// <summary>
+    /// Every current ACH form validation error, in validator field order. The Send page renders
+    /// the full list inline so no failure is hidden behind the first one.
+    /// Use: High (every Save payee attempt). Scope: SendPage error list.
+    /// </summary>
+    public ObservableCollection<string> RecipientFormErrors { get; } = new();
+
     [ObservableProperty]
     private AchRecipientRow? selectedRecipient;
 
@@ -92,6 +99,9 @@ public partial class SendViewModel : ObservableObject
     [ObservableProperty]
     private bool isBusy;
 
+    [ObservableProperty]
+    private bool hasRecipientFormErrors;
+
     partial void OnSelectedRecipientChanged(AchRecipientRow? value)
     {
         if (value is not null)
@@ -123,7 +133,7 @@ public partial class SendViewModel : ObservableObject
     [RelayCommand]
     private async Task AddRecipientAsync()
     {
-        string? error = AchRecipientValidation.Validate(
+        IReadOnlyList<string> errors = AchRecipientValidation.ValidateAll(
             NewRecipientName,
             NewHolder,
             NewBank,
@@ -131,9 +141,15 @@ public partial class SendViewModel : ObservableObject
             NewAccount,
             NewAccountType,
             NewMemo);
-        if (error is not null)
+        RecipientFormErrors.Clear();
+        foreach (string error in errors)
         {
-            await _dialogs.ShowAlertAsync("Recipient", error);
+            RecipientFormErrors.Add(error);
+        }
+
+        HasRecipientFormErrors = RecipientFormErrors.Count > 0;
+        if (HasRecipientFormErrors)
+        {
             return;
         }
 
