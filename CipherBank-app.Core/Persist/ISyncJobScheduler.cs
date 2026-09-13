@@ -23,12 +23,20 @@ public interface ISyncJobScheduler
     Task EnqueueAsync(
         string key,
         SyncPriority priority,
+        Func<CancellationToken, Task> work)
+        => EnqueueAsync(key, priority, work, CancellationToken.None);
+
+    Task EnqueueAsync(
+        string key,
+        SyncPriority priority,
         Func<CancellationToken, Task> work,
-        CancellationToken ct = default);
+        CancellationToken ct);
 
     /// <summary>
     /// Waits for all queued and running work, propagating job faults and caller cancellation.
     /// Use: Medium (bounded shutdown and tests). Scope: process-wide sync scheduler.
     /// </summary>
-    Task DrainAsync(CancellationToken ct = default);
+    Task DrainAsync() => DrainAsync(CancellationToken.None);
+
+    Task DrainAsync(CancellationToken ct);
 }
