@@ -286,5 +286,4 @@ public static class MauiProgram
         Log.Information("Services registered successfully");
         return mauiAppBuilder;
     }
-
 }

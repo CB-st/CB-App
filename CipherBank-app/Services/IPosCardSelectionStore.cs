@@ -7,7 +7,7 @@ namespace CipherBank_app.Services;
 /// <summary>Stores the non-secret identifier of the card selected for POS.</summary>
 public interface IPosCardSelectionStore
 {
-    string Get(string fallback);
+    string GetSelectedCardId(string fallback);
 
-    void Set(string cardId);
+    void SetSelectedCardId(string cardId);
 }

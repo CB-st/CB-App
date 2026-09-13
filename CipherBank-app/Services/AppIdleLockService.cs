@@ -14,6 +14,10 @@ public sealed class AppIdleLockService
 {
     // --- Idle polling ---
     private static readonly TimeSpan IdleCheckInterval = TimeSpan.FromSeconds(5);
+    private static readonly Action<ILogger, Exception?> LogCleanupFailure = LoggerMessage.Define(
+        LogLevel.Error,
+        new EventId(1, "CustodyLockCleanupFailure"),
+        "Custody lock cleanup failed.");
 
     private readonly IAppSession _session;
     private readonly INavigationService _nav;
@@ -76,7 +80,7 @@ public sealed class AppIdleLockService
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Custody lock cleanup failed.");
+            LogCleanupFailure(_logger, exception);
         }
     }
 }
