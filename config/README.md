@@ -1,10 +1,19 @@
-# Repository configuration
+# Runtime configuration
 
-`appsettings.json` contains non-secret production defaults. The host applies
-`appsettings.Development.json` only in debug/development builds and applies
-`appsettings.Windows.json` only on Windows, in that order.
+Configuration is separated by operational theme and embedded into Core as safe
+defaults. The host applies the Development overlay only for debug/development
+builds and the Windows overlay only on Windows, in that order.
+
+| Directory | Section | Controls |
+| --- | --- | --- |
+| `security/` | `Cryptography` | Custody AES-GCM and PBKDF2 parameters |
+| `dispatch/` | `SyncScheduler` | Sync concurrency and dispatch behavior |
+| `persistence/` | `Persistence` | On-device database naming and initialization |
+| `sonar/` | server quality gate | New-code quality thresholds and project assignment contract |
+| `ui/` | `Cora`, `Carousel` | Cora copy and carousel layout defaults |
 
 Development-only recipient seeds live in the Development overlay. Production
 defaults intentionally bind an empty `Persistence:DefaultRecipients` list.
-Configuration selects behavior and endpoints only; never place keys, tokens,
-customer banking coordinates, or other secrets in these files.
+Never place secrets, tokens, production certificate pins, mnemonics, or
+customer banking coordinates in these files. Invalid required values must fail
+options validation during startup.
