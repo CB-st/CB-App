@@ -141,6 +141,9 @@ public static class MauiProgram
         mauiAppBuilder.Services.AddSingleton<IThemeColorProvider, MauiThemeColorProvider>();
         mauiAppBuilder.Services.AddSingleton<IUiDispatcher, MauiUiDispatcher>();
         mauiAppBuilder.Services.AddSingleton<IPosCardSelectionStore, MauiPosCardSelectionStore>();
+
+        // Theme port keeps Application.Current out of ViewModels (CB1005).
+        mauiAppBuilder.Services.AddSingleton<IAppThemeSetter, MauiAppThemeSetter>();
         mauiAppBuilder.Services.AddSingleton<TaskScheduler>(TaskScheduler.Default);
 
         // MAUI adapters and Core coordinators.

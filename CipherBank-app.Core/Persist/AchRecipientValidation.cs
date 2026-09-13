@@ -90,14 +90,16 @@ public static class AchRecipientValidation
         => string.IsNullOrWhiteSpace(value) ? message : null;
 
     /// <summary>
-    /// Ensures routing is exactly <see cref="RoutingNumberDigitCount"/> digits.
+    /// Ensures routing is exactly <see cref="RoutingNumberDigitCount"/> ASCII digits.
+    /// Unicode decimal digits (for example Arabic-Indic) are rejected: the ABA wire
+    /// format is ASCII 0-9, matching <c>PersistenceOptions</c> routing validation.
     /// Use: High (Validate). Scope: this helper.
     /// </summary>
     private static string? ValidateRouting(string routing)
     {
         string trimmed = routing.Trim();
         bool exactDigits = trimmed.Length == RoutingNumberDigitCount
-            && trimmed.All(char.IsDigit);
+            && trimmed.All(char.IsAsciiDigit);
         return exactDigits
             ? null
             : Strings.AchRoutingNumberMustBeDigits(RoutingNumberDigitCount);
@@ -134,9 +136,9 @@ public static class AchRecipientValidation
             : null;
 
     /// <summary>
-    /// Strips non-digit characters from a routing or similar numeric field.
+    /// Strips non-ASCII-digit characters from a routing or similar numeric field.
     /// Use: High (Validate/Mask). Scope: this helper.
     /// </summary>
     private static string DigitsOnly(string value)
-        => new(value.Where(char.IsDigit).ToArray());
+        => new(value.Where(char.IsAsciiDigit).ToArray());
 }
