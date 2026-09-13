@@ -10,7 +10,6 @@ namespace CipherBank_app.Persist;
 /// <inheritdoc />
 public sealed class LocalDb : ILocalDb, IAsyncDisposable, IDisposable
 {
-    private readonly FileInfo _databaseFile;
     private readonly string _path;
     private readonly DbContextOptions<CipherBankDbContext> _options;
     private readonly SemaphoreSlim _initializeGate = new(1, 1);
@@ -21,7 +20,6 @@ public sealed class LocalDb : ILocalDb, IAsyncDisposable, IDisposable
     {
         ArgumentNullException.ThrowIfNull(databaseFile);
         ArgumentException.ThrowIfNullOrWhiteSpace(databaseFile.ToString());
-        _databaseFile = databaseFile;
         _path = System.IO.Path.GetFullPath(databaseFile.ToString());
         string connectionString = new SqliteConnectionStringBuilder { DataSource = _path }.ToString();
         _options = new DbContextOptionsBuilder<CipherBankDbContext>()
@@ -30,8 +28,6 @@ public sealed class LocalDb : ILocalDb, IAsyncDisposable, IDisposable
     }
 
     public string Path => _path;
-
-    public FileInfo DatabaseFile => _databaseFile;
 
     /// <summary>
     /// Applies EF Core migrations. Prototype SQLite files without a migration history are deleted first.
