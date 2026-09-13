@@ -2,8 +2,10 @@
 // Copyright (c) CipherBank. Licensed under the BSD 3-Clause License.
 // </copyright>
 
+using CipherBank_app.Custody;
 using CipherBank_app.Persist;
-using Serilog;
+using CipherBank_app.Services;
+using CipherBank_app.Session;
 
 namespace CipherBank_app;
 
@@ -12,35 +14,39 @@ namespace CipherBank_app;
 /// </summary>
 public partial class App : Application
 {
-    public App(IRecipientSeedInitializer recipientSeeds)
+    private readonly IServiceProvider _services;
+    private readonly IAppSession _session;
+    private readonly ILocalDb _db;
+    private readonly ICustodyService _custody;
+    private readonly AppIdleLockService _idleLock;
+    private readonly IRecipientSeedInitializer _recipientSeeds;
+
+    public App(
+        IServiceProvider services,
+        IAppSession session,
+        ILocalDb db,
+        ICustodyService custody,
+        AppIdleLockService idleLock,
+        IRecipientSeedInitializer recipientSeeds)
     {
         InitializeComponent();
-
-        // MAUI has no async build hook (IMauiInitializeService is synchronous), so the
-        // App constructor is the defined async startup path: start the initialization
-        // task after the provider is built and surface failures through the log.
-        _ = SeedRecipientsAsync(recipientSeeds);
-    }
-
-    protected override Window CreateWindow(IActivationState? activationState)
-    {
-        return new Window(new AppShell());
+        _services = services;
+        _session = session;
+        _db = db;
+        _custody = custody;
+        _idleLock = idleLock;
+        _recipientSeeds = recipientSeeds;
+        UserAppTheme = AppTheme.Dark;
     }
 
     /// <summary>
-    /// Seeds configured default recipients into a new database at startup.
-    /// Failures are logged and never fatal; seeding is idempotent per configured ID.
-    /// Use: Low (once per cold start). Scope: app startup.
+    /// Creates the root window with a DI-aware AppShell. Recipient seeding is awaited
+    /// inside AppShell's gated splash boot, so the shell cannot expose a recipient
+    /// surface before seeding commits.
+    /// Use: High (once per process). Scope: application lifetime.
     /// </summary>
-    private static async Task SeedRecipientsAsync(IRecipientSeedInitializer recipientSeeds)
+    protected override Window CreateWindow(IActivationState? activationState)
     {
-        try
-        {
-            await recipientSeeds.InitializeAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Recipient seed initialization failed");
-        }
+        return new Window(new AppShell(_services, _session, _db, _custody, _idleLock, _recipientSeeds));
     }
 }
