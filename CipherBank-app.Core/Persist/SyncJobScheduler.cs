@@ -148,7 +148,11 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
         {
             job.Completion.TrySetCanceled(job.Cancellation.Token);
         }
-        catch (Exception exception)
+        catch (OperationCanceledException exception)
+        {
+            job.Completion.TrySetException(exception);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
             job.Completion.TrySetException(exception);
         }

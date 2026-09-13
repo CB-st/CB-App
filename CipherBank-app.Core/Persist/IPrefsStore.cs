@@ -14,11 +14,15 @@ public interface IPrefsStore
     /// Loads the on-device <c>user_prefs</c> JSON bag, or defaults when the row is missing or invalid.
     /// Use: High (home / settings). Scope: IPrefsStore consumers.
     /// </summary>
-    Task<UserPrefs> LoadAsync(CancellationToken ct = default);
+    Task<UserPrefs> LoadAsync() => LoadAsync(CancellationToken.None);
+
+    Task<UserPrefs> LoadAsync(CancellationToken ct);
 
     /// <summary>
     /// Serializes <paramref name="prefs"/> with System.Text.Json and upserts the <c>user_prefs</c> row.
     /// Use: High (settings save). Scope: IPrefsStore consumers.
     /// </summary>
-    Task SaveAsync(UserPrefs prefs, CancellationToken ct = default);
+    Task SaveAsync(UserPrefs prefs) => SaveAsync(prefs, CancellationToken.None);
+
+    Task SaveAsync(UserPrefs prefs, CancellationToken ct);
 }
