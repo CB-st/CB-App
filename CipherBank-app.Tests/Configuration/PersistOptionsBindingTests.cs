@@ -58,8 +58,7 @@ public sealed class PersistOptionsBindingTests
     [Fact]
     public void EmbeddedAppSettings_UnboundSyncSchedulerResolvesHalfCores()
     {
-        SyncSchedulerOptions options = EmbeddedAppSettings.BindOptions<SyncSchedulerOptions>(
-            SyncSchedulerOptions.SectionName);
+        SyncSchedulerOptions options = EmbeddedAppSettings.BindOptions<SyncSchedulerOptions>();
         options.MaxConcurrency.Should().Be(0);
         int expected = Math.Clamp(
             (int)Math.Ceiling(Environment.ProcessorCount / 2.0),
