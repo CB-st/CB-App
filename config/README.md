@@ -7,6 +7,7 @@ builds and the Windows overlay only on Windows, in that order.
 | Directory | Section | Controls |
 | --- | --- | --- |
 | `security/` | `Cryptography` | Custody AES-GCM and PBKDF2 parameters |
+| `challenge-pass/` | `ChallengePass` | Installed session suite selection (non-secret identifiers only) |
 | `dispatch/` | `SyncScheduler` | Sync concurrency and dispatch behavior |
 | `persistence/` | `Persistence` | On-device database naming and initialization |
 | `sonar/` | server quality gate | New-code quality thresholds and project assignment contract |
@@ -15,5 +16,5 @@ builds and the Windows overlay only on Windows, in that order.
 Development-only recipient seeds live in the Development overlay. Production
 defaults intentionally bind an empty `Persistence:DefaultRecipients` list.
 Never place secrets, tokens, production certificate pins, mnemonics, or
-customer banking coordinates in these files. Invalid required values must fail
-options validation during startup.
+customer banking coordinates in these files. Invalid required security,
+persistence, or suite values must fail options validation during startup.
