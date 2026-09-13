@@ -47,13 +47,15 @@ public sealed class MarketRepository : IMarketRepository
         CancellationToken ct)
     {
         string normalizedSymbol = symbol.ToUpperInvariant();
-        Dictionary<long, double> latestByTimestamp = points
-            .GroupBy(point => point.T)
-            .ToDictionary(group => group.Key, group => group.Last().V);
-        if (latestByTimestamp.Count == 0)
+        (long T, double V)[] snapshot = points.ToArray();
+        if (snapshot is [])
         {
             return;
         }
+
+        Dictionary<long, double> latestByTimestamp = snapshot
+            .GroupBy(point => point.T)
+            .ToDictionary(group => group.Key, group => group.Last().V);
 
         CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
