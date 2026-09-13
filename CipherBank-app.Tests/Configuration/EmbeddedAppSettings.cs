@@ -13,14 +13,14 @@ namespace CipherBank_app.Tests.Configuration;
 internal static class EmbeddedAppSettings
 {
     internal static PersistenceOptions BindPersistence(string? environment = null)
-        => BindOptions<PersistenceOptions>(PersistenceOptions.SectionName, environment);
+        => BindOptions<PersistenceOptions>(environment);
 
-    internal static T BindOptions<T>(string sectionName, string? environment = null)
-        where T : class, new()
+    internal static T BindOptions<T>(string? environment = null)
+        where T : class, IOptionsSection, new()
     {
         IConfigurationRoot config = Load(environment);
         ServiceCollection services = new ServiceCollection();
-        services.AddOptions<T>().Bind(config.GetSection(sectionName));
+        services.AddOptions<T>().Bind(config.GetSection(T.SectionName));
         using ServiceProvider provider = services.BuildServiceProvider();
         return provider.GetRequiredService<IOptions<T>>().Value;
     }

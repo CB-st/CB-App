@@ -69,7 +69,7 @@ public sealed class RatesCache : IRatesCache, IDisposable
             .GroupBy(row => row.Symbol, StringComparer.Ordinal)
             .Select(group => group.MaxBy(row => row.UpdatedAtMs)!)
             .ToArray();
-        if (normalized.Length == 0)
+        if (normalized is [])
         {
             return;
         }

@@ -22,13 +22,13 @@ public sealed class PinChangeCoordinator
     private static readonly Dictionary<PinChangeStatus, string> Messages =
         new Dictionary<PinChangeStatus, string>
         {
-            [PinChangeStatus.Success] = Strings.PinChangeSuccess,
-            [PinChangeStatus.TooShort] = Strings.PinChangeTooShort(MinPinLength),
-            [PinChangeStatus.Mismatch] = Strings.PinChangeMismatch,
-            [PinChangeStatus.SameAsCurrent] = Strings.PinChangeSameAsCurrent,
-            [PinChangeStatus.WrongCurrentPin] = Strings.PinChangeWrongCurrentPin,
-            [PinChangeStatus.LockedOut] = Strings.PinChangeLockedOut,
-            [PinChangeStatus.VaultNotReady] = Strings.PinChangeVaultNotReady,
+            [PinChangeStatus.Success] = UserFacingStrings.PinChangeSuccess,
+            [PinChangeStatus.TooShort] = UserFacingStrings.PinChangeTooShort(MinPinLength),
+            [PinChangeStatus.Mismatch] = UserFacingStrings.PinChangeMismatch,
+            [PinChangeStatus.SameAsCurrent] = UserFacingStrings.PinChangeSameAsCurrent,
+            [PinChangeStatus.WrongCurrentPin] = UserFacingStrings.PinChangeWrongCurrentPin,
+            [PinChangeStatus.LockedOut] = UserFacingStrings.PinChangeLockedOut,
+            [PinChangeStatus.VaultNotReady] = UserFacingStrings.PinChangeVaultNotReady,
         };
 
     /// <summary>Custody result → surfaced status, so this class never grows a branch chain over results.</summary>
