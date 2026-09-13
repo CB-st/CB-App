@@ -33,10 +33,10 @@ override CI Sonar: new issues on Persist code still fail the gate.
 - `LocalDb` is constructed from `FileInfo`. `ILocalDb.Path` stays `string`
   (`FullName` after `GetFullPath`) for SQLite `DataSource` and Shell.
   `ILocalDb.DatabaseFile` exposes the `FileInfo`.
-- Default payees bind from `PersistenceOptions.DefaultRecipients` (stable JSON
-  ids such as `seed:rent-4th-st`). An empty list seeds nothing. Do not generate
-  GUID seed ids. `DefaultRecipients` is a get-only list so options bind into
-  the existing collection.
+- Optional development payees bind from `PersistenceOptions.DefaultRecipients`
+  (stable JSON ids such as `seed:rent-4th-st`). Production defaults seed
+  nothing. `RecipientSeedInitializer` owns first-run bootstrap; repositories
+  remain CRUD-only. Do not generate GUID seed ids.
 - `IUserPrefs` is the read shape for UI/sync. `IPrefsStore` still returns
   `UserPrefs` so System.Text.Json can materialize the bag.
 - `SyncSchedulerOptions.MaxConcurrency` default `0` means unset.

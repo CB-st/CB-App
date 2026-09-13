@@ -4,6 +4,7 @@
 
 using CipherBank_app.Configuration;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace CipherBank_app.Tests.Configuration;
@@ -11,21 +12,43 @@ namespace CipherBank_app.Tests.Configuration;
 public sealed class PersistOptionsBindingTests
 {
     /// <summary>
-    /// Embedded appsettings binds Persistence.DatabaseName and the two demo payee seeds.
+    /// Production defaults contain no demo payees; Development explicitly opts into the stable demo rows.
     /// Use: Medium. Scope: persist options contract.
     /// </summary>
     [Fact]
-    public void EmbeddedAppSettings_BindPersistenceDatabaseNameAndDefaultRecipients()
+    public void EmbeddedAppSettings_SeparatesProductionAndDevelopmentRecipients()
     {
         PersistenceOptions options = EmbeddedAppSettings.BindPersistence();
+        PersistenceOptions development = EmbeddedAppSettings.BindPersistence("Development");
+
         options.DatabaseName.Should().Be("cipherbank.db");
         Path.GetFileName(options.DatabaseName).Should().Be(options.DatabaseName);
         options.AreDefaultRecipientsValid().Should().BeTrue();
-        options.DefaultRecipients.Should().HaveCount(2);
-        options.DefaultRecipients[0].Id.Should().Be("seed:rent-4th-st");
-        options.DefaultRecipients[0].Name.Should().Be("Rent — 4th St LLC");
-        options.DefaultRecipients[1].Id.Should().Be("seed:utilities-co");
-        options.DefaultRecipients[1].Name.Should().Be("Utilities Co");
+        options.DefaultRecipients.Should().BeEmpty();
+        development.DefaultRecipients.Should().HaveCount(2);
+        development.DefaultRecipients[0].Id.Should().Be("seed:rent-4th-st");
+        development.DefaultRecipients[1].Id.Should().Be("seed:utilities-co");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("../cipherbank.db")]
+    [InlineData("/tmp/cipherbank.db")]
+    public void PersistenceOptions_InvalidDatabaseName_FailsValidation(string databaseName)
+    {
+        PersistenceOptions options = new PersistenceOptions { DatabaseName = databaseName };
+
+        options.IsValid().Should().BeFalse();
+    }
+
+    [Fact]
+    public void BuildForHost_DevelopmentFlag_SelectsDevelopmentOverlay()
+    {
+        IConfiguration configuration = CipherBankDefaultsConfiguration.BuildForHost(
+            isDevelopment: true,
+            isWindows: false);
+
+        configuration.GetSection("Persistence:DefaultRecipients").GetChildren().Should().HaveCount(2);
     }
 
     /// <summary>

@@ -30,10 +30,4 @@ public interface IRecipientRepository
     /// Use: Medium (payee editor). Scope: IRecipientRepository consumers.
     /// </summary>
     Task DeleteAsync(string id, CancellationToken ct = default);
-
-    /// <summary>
-    /// Inserts the two default demo payees in one transaction when the table is empty.
-    /// Use: High (first-run hydration). Scope: IRecipientRepository consumers.
-    /// </summary>
-    Task SeedDefaultsIfEmptyAsync(CancellationToken ct = default);
 }
