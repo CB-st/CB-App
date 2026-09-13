@@ -63,18 +63,7 @@ public sealed class RecipientSeedInitializer : IRecipientSeedInitializer
                 {
                     await RecipientEntityWriter.ApplyAsync(
                         context,
-                        new AchRecipientRow(
-                            seed.Id,
-                            seed.Name,
-                            seed.Holder,
-                            seed.Bank,
-                            seed.Routing,
-                            seed.Account,
-                            seed.AccountType,
-                            seed.Memo,
-                            null,
-                            null,
-                            now),
+                        new AchRecipientRow(seed, now),
                         ct).ConfigureAwait(false);
                 }
 
