@@ -30,4 +30,32 @@ public class RatesCacheTests
 
         rows.Should().Equal(new RateRow("BTC", 68000m, 2.5m, 1002));
     }
+
+    /// <summary>
+    /// Delayed responses must not replace a newer persisted market snapshot.
+    /// Use: Medium (concurrent refresh regression). Scope: RatesCache.
+    /// </summary>
+    [Fact]
+    public async Task UpsertAsync_OlderTimestamp_DoesNotReplaceNewerSnapshot()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cb-rates-" + Guid.NewGuid().ToString("N") + ".db");
+        LocalDb db = new LocalDb(new FileInfo(path));
+        await db.InitializeAsync();
+        RatesCache cache = new RatesCache(db);
+
+        await cache.UpsertAsync([new RateRow("BTC", 68_000m, 2.5m, 2_000)], default);
+        await cache.UpsertAsync([new RateRow(" btc ", 67_000m, 1.5m, 1_000)], default);
+
+        IReadOnlyList<RateRow> rows = await cache.GetAsync([" btc "], default);
+
+        rows.Should().Equal(new RateRow("BTC", 68_000m, 2.5m, 2_000));
+    }
+
+    [Fact]
+    public void Constructor_BlankSymbol_ThrowsArgumentException()
+    {
+        Action act = () => _ = new RateRow(" ", 1m, 0m, 1);
+
+        act.Should().Throw<ArgumentException>();
+    }
 }

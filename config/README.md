@@ -1,8 +1,8 @@
-# Runtime Configuration
+# Runtime configuration
 
-Configuration is separated by operational theme. Files are embedded into Core as
-safe defaults and bound to typed options at the MAUI composition root. Environment
-or deployment providers may override them after defaults are loaded.
+Configuration is separated by operational theme and embedded into Core as safe
+defaults. The host applies the Development overlay only for debug/development
+builds and the Windows overlay only on Windows, in that order.
 
 | Directory | Section | Controls |
 | --- | --- | --- |
@@ -12,6 +12,8 @@ or deployment providers may override them after defaults are loaded.
 | `sonar/` | server quality gate | New-code quality thresholds and project assignment contract |
 | `ui/` | `Cora`, `Carousel` | Cora copy and carousel layout defaults |
 
-Do not place secrets, tokens, production certificate pins, mnemonics, or account
-data in these files. Unknown keys are ignored; invalid security values must fail
+Development-only recipient seeds live in the Development overlay. Production
+defaults intentionally bind an empty `Persistence:DefaultRecipients` list.
+Never place secrets, tokens, production certificate pins, mnemonics, or
+customer banking coordinates in these files. Invalid required values must fail
 options validation during startup.

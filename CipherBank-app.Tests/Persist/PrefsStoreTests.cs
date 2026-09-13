@@ -52,4 +52,21 @@ public class PrefsStoreTests
         prefs.LockIdleSeconds.Should().Be(new UserPrefs().LockIdleSeconds);
         prefs.EnabledCurrencies.Should().Equal(UserPrefs.DefaultEnabledCurrencies);
     }
+
+    /// <summary>
+    /// Preference reads must propagate caller cancellation into database initialization and EF.
+    /// Use: Medium (session cancellation). Scope: PrefsStore.
+    /// </summary>
+    [Fact]
+    public async Task LoadAsync_CanceledToken_ThrowsOperationCanceledException()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cb-prefs-" + Guid.NewGuid().ToString("N") + ".db");
+        PrefsStore store = new PrefsStore(new LocalDb(new FileInfo(path)));
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        Func<Task> act = async () => await store.LoadAsync(cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
 }

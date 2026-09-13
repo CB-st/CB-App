@@ -130,7 +130,7 @@ public sealed class CustodyService : ICustodyService
         string? blob = await _store.GetAsync(BlobKey).ConfigureAwait(false);
         if (string.IsNullOrEmpty(blob))
         {
-            return false;
+            return FailUnlock();
         }
 
         try
@@ -178,7 +178,7 @@ public sealed class CustodyService : ICustodyService
         string? blob = await _store.GetAsync(BlobKey).ConfigureAwait(false);
         if (string.IsNullOrEmpty(blob))
         {
-            return false;
+            return FailUnlock();
         }
 
         try

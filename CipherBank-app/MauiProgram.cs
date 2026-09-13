@@ -21,7 +21,23 @@ namespace CipherBank_app;
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
-        => MauiApp.CreateBuilder()
+    {
+#if DEBUG
+        const bool IsDevelopment = true;
+#else
+        const bool IsDevelopment = false;
+#endif
+#if WINDOWS
+        const bool IsWindows = true;
+#else
+        const bool IsWindows = false;
+#endif
+        MauiAppBuilder builder = MauiApp.CreateBuilder();
+        builder.Configuration.AddConfiguration(CipherBankDefaultsConfiguration.BuildForHost(
+            IsDevelopment,
+            IsWindows));
+
+        return builder
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
@@ -45,6 +61,7 @@ public static class MauiProgram
             .RegisterViewModels()
             .RegisterViews()
             .Build();
+    }
 
     /// <summary>
     /// Configures comprehensive logging with Serilog.
@@ -99,7 +116,6 @@ public static class MauiProgram
     /// </summary>
     public static MauiAppBuilder RegisterServices(this MauiAppBuilder mauiAppBuilder)
     {
-        mauiAppBuilder.Configuration.AddConfiguration(CipherBankDefaultsConfiguration.Build());
         mauiAppBuilder.Services.AddCipherBankCore(
             mauiAppBuilder.Configuration,
             FileSystem.Current.AppDataDirectory);

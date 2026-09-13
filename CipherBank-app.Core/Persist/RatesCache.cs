@@ -8,14 +8,21 @@ using Microsoft.EntityFrameworkCore;
 namespace CipherBank_app.Persist;
 
 /// <inheritdoc />
-public sealed class RatesCache : IRatesCache
+public sealed class RatesCache : IRatesCache, IDisposable
 {
     private readonly ILocalDb _db;
+    private readonly SemaphoreSlim _writeGate = new(1, 1);
 
     public RatesCache(ILocalDb db)
     {
         _db = db;
     }
+
+    /// <summary>
+    /// Releases the write-serialization gate.
+    /// Use: Low (container shutdown). Scope: RatesCache instance.
+    /// </summary>
+    public void Dispose() => _writeGate.Dispose();
 
     /// <inheritdoc />
     public Task UpsertAsync(IEnumerable<RateRow> rows, CancellationToken ct)
@@ -31,7 +38,7 @@ public sealed class RatesCache : IRatesCache
     {
         string[] requestedSymbols = symbols?
             .Where(symbol => !string.IsNullOrWhiteSpace(symbol))
-            .Select(symbol => symbol.ToUpperInvariant())
+            .Select(RateRow.NormalizeSymbol)
             .Distinct(StringComparer.Ordinal)
             .ToArray() ?? [];
 
@@ -58,42 +65,50 @@ public sealed class RatesCache : IRatesCache
 
     private async Task UpsertCoreAsync(IEnumerable<RateRow> rows, CancellationToken ct)
     {
-        // RateRow normalizes Symbol at construction; only last-write-wins dedupe is needed here.
         RateRow[] normalized = rows
             .GroupBy(row => row.Symbol, StringComparer.Ordinal)
-            .Select(group => group.Last())
+            .Select(group => group.MaxBy(row => row.UpdatedAtMs)!)
             .ToArray();
         if (normalized.Length == 0)
         {
             return;
         }
 
-        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
-        await using (context)
+        await _writeGate.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            string[] symbols = normalized.Select(row => row.Symbol).ToArray();
-            List<RateSnapshotEntity> existingRows = await context.RateSnapshots
-                .Where(entity => symbols.Contains(entity.Symbol))
-                .ToListAsync(ct)
-                .ConfigureAwait(false);
-            Dictionary<string, RateSnapshotEntity> existing = existingRows.ToDictionary(
-                entity => entity.Symbol,
-                StringComparer.Ordinal);
-
-            foreach (RateRow row in normalized)
+            CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
+            await using (context)
             {
-                if (!existing.TryGetValue(row.Symbol, out RateSnapshotEntity? entity))
+                string[] symbols = normalized.Select(row => row.Symbol).ToArray();
+                Dictionary<string, RateSnapshotEntity> existing = await context.RateSnapshots
+                    .Where(entity => symbols.Contains(entity.Symbol))
+                    .ToDictionaryAsync(entity => entity.Symbol, StringComparer.Ordinal, ct)
+                    .ConfigureAwait(false);
+
+                foreach (RateRow row in normalized)
                 {
-                    entity = new RateSnapshotEntity { Symbol = row.Symbol };
-                    context.RateSnapshots.Add(entity);
+                    if (!existing.TryGetValue(row.Symbol, out RateSnapshotEntity? entity))
+                    {
+                        entity = new RateSnapshotEntity { Symbol = row.Symbol };
+                        context.RateSnapshots.Add(entity);
+                    }
+                    else if (row.UpdatedAtMs < entity.UpdatedAtMs)
+                    {
+                        continue;
+                    }
+
+                    entity.Usd = row.Usd;
+                    entity.Change24H = row.Change24h;
+                    entity.UpdatedAtMs = row.UpdatedAtMs;
                 }
 
-                entity.Usd = row.Usd;
-                entity.Change24H = row.Change24h;
-                entity.UpdatedAtMs = row.UpdatedAtMs;
+                await context.SaveChangesAsync(ct).ConfigureAwait(false);
             }
-
-            await context.SaveChangesAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _writeGate.Release();
         }
     }
 }
