@@ -40,13 +40,13 @@ public sealed class LocalDbInitializeTests
     /// Use: Low (shutdown race regression). Scope: LocalDb lifecycle.
     /// </summary>
     [Fact]
-    public async Task Dispose_DuringInitialize_DoesNotFaultActiveInitialization()
+    public async Task DisposeAsync_DuringInitialize_DoesNotFaultActiveInitialization()
     {
         string path = Path.Combine(Path.GetTempPath(), "cb-init-" + Guid.NewGuid().ToString("N") + ".db");
         LocalDb db = new LocalDb(new FileInfo(path));
 
         Task initialize = db.InitializeAsync();
-        db.Dispose();
+        await db.DisposeAsync();
 
         Func<Task> act = () => initialize;
         await act.Should().NotThrowAsync();
