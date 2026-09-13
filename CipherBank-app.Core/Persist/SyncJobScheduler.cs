@@ -111,6 +111,7 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
 
             _disposed = true;
             _shutdown.Cancel();
+            _shutdown.Dispose();
         }
     }
 
@@ -125,7 +126,9 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
         {
             QueuedJob job = _queue.Dequeue();
             _running++;
-            _ = _taskFactory.StartNew(() => RunJobAsync(job)).Unwrap();
+            _ = _taskFactory.StartNew(
+                () => RunJobAsync(job),
+                CancellationToken.None).Unwrap();
         }
     }
 
