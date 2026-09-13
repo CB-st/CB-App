@@ -11,5 +11,7 @@ public interface IRecipientSeedInitializer
     /// Inserts the configured recipient set only when the table is empty.
     /// Use: High (first payee list). Scope: application database.
     /// </summary>
-    Task InitializeAsync(CancellationToken ct = default);
+    Task InitializeAsync() => InitializeAsync(CancellationToken.None);
+
+    Task InitializeAsync(CancellationToken ct);
 }
