@@ -49,6 +49,7 @@ public sealed class LocalDb : ILocalDb, IAsyncDisposable, IDisposable
         await _initializeGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
             if (_initialized)
             {
                 return;
@@ -84,7 +85,6 @@ public sealed class LocalDb : ILocalDb, IAsyncDisposable, IDisposable
             return;
         }
 
-        _initializeGate.Dispose();
         _disposed = true;
     }
 

@@ -84,6 +84,25 @@ public class PinAndCustodyTests
     }
 
     [Fact]
+    public async Task Custody_Unlock_MissingBlob_ClearsExistingSessionAndRaisesLocked()
+    {
+        MemStore store = new MemStore();
+        PinService pin = new PinService(store);
+        CustodyService custody = new CustodyService(store, pin);
+        await custody.SealAsync(MnemonicHelper.Generate(), "123456");
+        (await custody.UnlockAsync("123456")).Should().BeTrue();
+        int locked = 0;
+        custody.Locked += (_, _) => locked++;
+        await store.RemoveAsync(CustodyService.BlobKey);
+
+        (await custody.UnlockAsync("123456")).Should().BeFalse();
+
+        custody.IsUnlocked.Should().BeFalse();
+        custody.ExportMnemonic().Should().BeNull();
+        locked.Should().Be(1);
+    }
+
+    [Fact]
     public async Task Custody_SealAsync_RejectsShortPin()
     {
         MemStore store = new MemStore();

@@ -35,9 +35,9 @@ public sealed class AccountBootstrapService : IAccountBootstrapService
     {
         AccountBootstrapDto bootstrap = await _api.GetAccountBootstrapAsync(ct).ConfigureAwait(false);
 
-        UserPrefs local = await _prefs.LoadAsync().ConfigureAwait(false);
+        UserPrefs local = await _prefs.LoadAsync(ct).ConfigureAwait(false);
         PrefsMerge.Merge(local, bootstrap.ResolvedPrefs);
-        await _prefs.SaveAsync(local).ConfigureAwait(false);
+        await _prefs.SaveAsync(local, ct).ConfigureAwait(false);
 
         foreach (BootstrapRecipientDto contact in bootstrap.ResolvedRecipients)
         {
@@ -67,18 +67,20 @@ public sealed class AccountBootstrapService : IAccountBootstrapService
             }
 
             string accountPlaceholder = "****" + last4;
-            await _recipients.UpsertAsync(new AchRecipientRow(
-                contact.ResolvedId,
-                name.Trim(),
-                contact.ResolvedHolder,
-                contact.ResolvedBank,
-                digits,
-                accountPlaceholder,
-                contact.ResolvedAccountType is "savings" ? "savings" : "checking",
-                contact.ResolvedMemo,
-                AchRecipientValidation.MaskAccount(accountPlaceholder),
-                AchRecipientValidation.MaskRouting(digits),
-                _timeProvider.GetUtcNow())).ConfigureAwait(false);
+            await _recipients.UpsertAsync(
+                new AchRecipientRow(
+                    contact.ResolvedId,
+                    name.Trim(),
+                    contact.ResolvedHolder,
+                    contact.ResolvedBank,
+                    digits,
+                    accountPlaceholder,
+                    contact.ResolvedAccountType is "savings" ? "savings" : "checking",
+                    contact.ResolvedMemo,
+                    AchRecipientValidation.MaskAccount(accountPlaceholder),
+                    AchRecipientValidation.MaskRouting(digits),
+                    _timeProvider.GetUtcNow()),
+                ct).ConfigureAwait(false);
         }
     }
 }
