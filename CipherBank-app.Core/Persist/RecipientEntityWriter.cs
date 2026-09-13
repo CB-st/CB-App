@@ -34,14 +34,18 @@ internal static class RecipientEntityWriter
             context.Recipients.Add(entity);
         }
 
-        entity.Name = row.Name;
-        entity.Holder = row.Holder;
-        entity.Bank = row.Bank;
-        entity.AccountType = string.IsNullOrWhiteSpace(row.AccountType)
-            ? DefaultAccountType
-            : row.AccountType;
-        entity.Memo = row.Memo;
-        entity.AccountMask = accountMask;
-        entity.RoutingMask = routingMask;
+        // Copies the mutable columns in one call; Id and CreatedAt stay insert-owned.
+        context.Entry(entity).CurrentValues.SetValues(new
+        {
+            row.Name,
+            row.Holder,
+            row.Bank,
+            AccountType = string.IsNullOrWhiteSpace(row.AccountType)
+                ? DefaultAccountType
+                : row.AccountType,
+            row.Memo,
+            AccountMask = accountMask,
+            RoutingMask = routingMask,
+        });
     }
 }

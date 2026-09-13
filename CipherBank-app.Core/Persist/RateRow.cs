@@ -11,6 +11,15 @@ public sealed record RateRow(string Symbol, decimal Usd, decimal Change24h, long
 {
     private readonly string _symbol = NormalizeSymbol(Symbol);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RateRow"/> class from a persisted snapshot
+    /// entity. Use: High (every rates read). Scope: RatesCache projections.
+    /// </summary>
+    public RateRow(Persist.Entities.RateSnapshotEntity entity)
+        : this(entity.Symbol, entity.Usd, entity.Change24H, entity.UpdatedAtMs)
+    {
+    }
+
     /// <summary>Gets the asset symbol, always uppercase invariant.</summary>
     public string Symbol
     {
