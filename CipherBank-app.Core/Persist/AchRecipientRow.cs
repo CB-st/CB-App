@@ -2,6 +2,8 @@
 // Copyright (c) CipherBank. Licensed under the BSD 3-Clause License.
 // </copyright>
 
+using CipherBank_app.Configuration;
+
 namespace CipherBank_app.Persist;
 
 /// <summary>ACH / payee recipient stored on device.</summary>
@@ -20,4 +22,26 @@ public sealed record AchRecipientRow(
     string? Memo,
     string? AccountMask,
     string? RoutingMask,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt)
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AchRecipientRow"/> class from a configured
+    /// seed. Masks stay null: the entity writer computes them from the cleartext inputs.
+    /// Use: Low (startup seeding). Scope: RecipientSeedInitializer.
+    /// </summary>
+    public AchRecipientRow(DefaultRecipientOptions seed, DateTimeOffset createdAt)
+        : this(
+            seed.Id,
+            seed.Name,
+            seed.Holder,
+            seed.Bank,
+            seed.Routing,
+            seed.Account,
+            seed.AccountType,
+            seed.Memo,
+            null,
+            null,
+            createdAt)
+    {
+    }
+}

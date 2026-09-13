@@ -28,15 +28,7 @@ public sealed class WalletRepository : IWalletRepository
             return await context.Wallets
                 .AsNoTracking()
                 .OrderBy(entity => entity.CreatedAt)
-                .Select(entity => new LocalWalletRow(
-                    entity.Id,
-                    entity.Symbol,
-                    entity.Label,
-                    entity.Address,
-                    entity.Path,
-                    entity.AccountIndex,
-                    entity.Kind,
-                    entity.CreatedAt))
+                .Select(entity => new LocalWalletRow(entity))
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
         }
@@ -82,12 +74,16 @@ public sealed class WalletRepository : IWalletRepository
                 context.Wallets.Add(entity);
             }
 
-            entity.Symbol = row.Symbol;
-            entity.Label = row.Label;
-            entity.Address = row.Address;
-            entity.Path = row.Path;
-            entity.AccountIndex = row.AccountIndex;
-            entity.Kind = row.Kind;
+            // Copies the matching mutable columns in one call; Id and CreatedAt stay insert-owned.
+            context.Entry(entity).CurrentValues.SetValues(new
+            {
+                row.Symbol,
+                row.Label,
+                row.Address,
+                row.Path,
+                row.AccountIndex,
+                row.Kind,
+            });
             await context.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }
