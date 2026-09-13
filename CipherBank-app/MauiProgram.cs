@@ -34,15 +34,12 @@ public static class MauiProgram
 #else
         const bool IsDevelopment = false;
 #endif
-#if WINDOWS
-        const bool IsWindows = true;
-#else
-        const bool IsWindows = false;
-#endif
+
+        // Runtime platform check selects the appsettings.Windows.json overlay; no preprocessor fork.
         MauiAppBuilder builder = MauiApp.CreateBuilder();
         builder.Configuration.AddConfiguration(CipherBankDefaultsConfiguration.BuildForHost(
             IsDevelopment,
-            IsWindows));
+            OperatingSystem.IsWindows()));
 
         return builder
             .UseMauiApp<App>()
