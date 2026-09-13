@@ -35,6 +35,19 @@
             <Entry Text="{Binding NewMemo}" Placeholder="Memo (optional)" AutomationId="SendAchMemoEntry" />
             <Button Text="Save payee" Command="{Binding AddRecipientCommand}" AutomationId="SendAchSavePayeeButton" />
 
+            <!-- Full validation error list: every failing field, not just the first. -->
+            <VerticalStackLayout Spacing="4"
+                                 IsVisible="{Binding HasRecipientFormErrors}"
+                                 AutomationId="SendAchErrorList"
+                                 BindableLayout.ItemsSource="{Binding RecipientFormErrors}">
+              <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Label Text="{Binding ., StringFormat='• {0}'}"
+                         TextColor="{AppThemeBinding Light={StaticResource DangerText}, Dark={StaticResource DangerTextDark}}" />
+                </DataTemplate>
+              </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
             <Entry Text="{Binding Amount}" Placeholder="Amount" Keyboard="Numeric" AutomationId="SendAmountEntry" />
             <Picker Title="Speed" SelectedItem="{Binding Speed}" AutomationId="SendSpeedPicker">
               <Picker.Items>
