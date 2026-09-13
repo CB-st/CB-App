@@ -9,7 +9,7 @@ public sealed class MauiPosCardSelectionStore : IPosCardSelectionStore
 {
     private const string ActiveCardKey = "pos_active_card";
 
-    public string Get(string fallback) => Preferences.Default.Get(ActiveCardKey, fallback);
+    public string GetSelectedCardId(string fallback) => Preferences.Default.Get(ActiveCardKey, fallback);
 
-    public void Set(string cardId) => Preferences.Default.Set(ActiveCardKey, cardId);
+    public void SetSelectedCardId(string cardId) => Preferences.Default.Set(ActiveCardKey, cardId);
 }

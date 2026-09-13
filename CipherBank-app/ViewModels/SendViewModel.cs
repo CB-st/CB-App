@@ -22,6 +22,7 @@ public partial class SendViewModel : ObservableObject
     private readonly IAppSession _session;
     private readonly IStepUpAuth _stepUp;
     private readonly IRecipientRepository _recipients;
+    private readonly IRecipientSeedInitializer _recipientInitializer;
     private readonly IPrefsStore _prefs;
 
     private readonly TimeProvider _timeProvider;
@@ -32,6 +33,7 @@ public partial class SendViewModel : ObservableObject
         IAppSession session,
         IStepUpAuth stepUp,
         IRecipientRepository recipients,
+        IRecipientSeedInitializer recipientInitializer,
         IPrefsStore prefs,
         TimeProvider timeProvider,
         ICoraLineProvider coraLines)
@@ -42,6 +44,7 @@ public partial class SendViewModel : ObservableObject
         _session = session;
         _stepUp = stepUp;
         _recipients = recipients;
+        _recipientInitializer = recipientInitializer;
         _prefs = prefs;
         CoraLine = coraLines.GetLine("send");
     }
@@ -101,7 +104,7 @@ public partial class SendViewModel : ObservableObject
     private async Task AppearingAsync()
     {
         _session.Touch();
-        await _recipients.SeedDefaultsIfEmptyAsync();
+        await _recipientInitializer.InitializeAsync();
         await RefreshRecipientsAsync();
 
         var prefs = await _prefs.LoadAsync();

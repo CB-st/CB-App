@@ -220,7 +220,7 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
         }
 
         await LoadVaultAsync();
-        ActiveCardId = _cardSelection.Get(Cards.FirstOrDefault()?.CardId ?? string.Empty);
+        ActiveCardId = _cardSelection.GetSelectedCardId(Cards.FirstOrDefault()?.CardId ?? string.Empty);
         SelectedCard = Cards.FirstOrDefault(c => c.CardId == ActiveCardId) ?? Cards.FirstOrDefault();
         ActiveCardLabel = SelectedCard is null ? null : $"{SelectedCard.Label} •••• {SelectedCard.Last4}";
     }
@@ -463,7 +463,7 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
         {
             ActiveCardId = Cards.FirstOrDefault()?.CardId;
             SelectedCard = Cards.FirstOrDefault();
-            _cardSelection.Set(ActiveCardId ?? string.Empty);
+            _cardSelection.SetSelectedCardId(ActiveCardId ?? string.Empty);
         }
     }
 
@@ -512,7 +512,7 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
 
         ActiveCardId = value.CardId;
         ActiveCardLabel = $"{value.Label} •••• {value.Last4}";
-        _cardSelection.Set(value.CardId);
+        _cardSelection.SetSelectedCardId(value.CardId);
     }
 
     [RelayCommand]

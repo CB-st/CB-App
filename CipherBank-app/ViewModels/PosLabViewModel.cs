@@ -92,7 +92,7 @@ public partial class PosLabViewModel : ObservableObject
     {
         _session.Touch();
         NfcSupported = _nfc.IsSupported;
-        string cardId = _cardSelection.Get(string.Empty);
+        string cardId = _cardSelection.GetSelectedCardId(string.Empty);
         ActiveCardLabel = string.IsNullOrEmpty(cardId) ? "Default hardware test card" : $"Card {cardId[..Math.Min(8, cardId.Length)]}…";
     }
 
