@@ -50,8 +50,15 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
     public Task EnqueueAsync(
         string key,
         SyncPriority priority,
+        Func<CancellationToken, Task> work)
+        => EnqueueAsync(key, priority, work, CancellationToken.None);
+
+    /// <inheritdoc />
+    public Task EnqueueAsync(
+        string key,
+        SyncPriority priority,
         Func<CancellationToken, Task> work,
-        CancellationToken ct = default)
+        CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(work);
@@ -77,7 +84,10 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
     }
 
     /// <inheritdoc />
-    public async Task DrainAsync(CancellationToken ct = default)
+    public Task DrainAsync() => DrainAsync(CancellationToken.None);
+
+    /// <inheritdoc />
+    public async Task DrainAsync(CancellationToken ct)
     {
         while (true)
         {
@@ -126,47 +136,45 @@ public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
         {
             QueuedJob job = _queue.Dequeue();
             _running++;
-            _ = _taskFactory.StartNew(
-                () => RunJobAsync(job),
-                CancellationToken.None).Unwrap();
+            Task run = _taskFactory.StartNew(
+                    () => job.Work(job.Cancellation.Token),
+                    CancellationToken.None)
+                .Unwrap();
+            _ = run.ContinueWith(
+                completed => OnJobCompleted(job, completed),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
     }
 
     /// <summary>
-    /// Completes one observable job and releases its deduplication key.
+    /// Transfers terminal task state to the observable completion and releases the job key.
     /// Use: High (per job). Scope: SyncJobScheduler dispatch.
     /// </summary>
-    private async Task RunJobAsync(QueuedJob job)
+    private void OnJobCompleted(QueuedJob job, Task completed)
     {
-        try
-        {
-            job.Cancellation.Token.ThrowIfCancellationRequested();
-            await job.Work(job.Cancellation.Token).ConfigureAwait(false);
-            job.Completion.TrySetResult();
-        }
-        catch (OperationCanceledException) when (job.Cancellation.IsCancellationRequested)
+        if (completed.IsCanceled)
         {
             job.Completion.TrySetCanceled(job.Cancellation.Token);
         }
-        catch (OperationCanceledException exception)
+        else if (completed.Exception is not null)
         {
-            job.Completion.TrySetException(exception);
+            job.Completion.TrySetException(completed.Exception.InnerExceptions);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        else
         {
-            job.Completion.TrySetException(exception);
+            job.Completion.TrySetResult();
         }
-        finally
-        {
-            lock (_gate)
-            {
-                _jobs.Remove(job.Key);
-                _running--;
-                DispatchEligibleLocked();
-            }
 
-            job.Cancellation.Dispose();
+        lock (_gate)
+        {
+            _jobs.Remove(job.Key);
+            _running--;
+            DispatchEligibleLocked();
         }
+
+        job.Cancellation.Dispose();
     }
 
     private sealed record QueuedJob(
