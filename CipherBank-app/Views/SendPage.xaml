@@ -24,15 +24,38 @@
 
             <Label Text="Add ACH payee" FontAttributes="Bold" Margin="0,8,0,0" />
             <Entry Text="{Binding NewRecipientName}" Placeholder="Payee name" AutomationId="SendAchPayeeNameEntry" />
+            <!-- Inline field errors pair each validator finding with its input; the summary list
+                 below the Save button still carries the complete set. -->
+            <Label Text="{Binding NameError}" AutomationId="SendAchNameError"
+                   IsVisible="{Binding NameError, Converter={StaticResource StringToBoolConverter}}"
+                   TextColor="{AppThemeBinding Light={StaticResource DangerText}, Dark={StaticResource DangerTextDark}}" />
             <Entry Text="{Binding NewHolder}" Placeholder="Account holder" AutomationId="SendAchHolderEntry" />
+            <Label Text="{Binding HolderError}" AutomationId="SendAchHolderError"
+                   IsVisible="{Binding HolderError, Converter={StaticResource StringToBoolConverter}}"
+                   TextColor="{AppThemeBinding Light={StaticResource DangerText}, Dark={StaticResource DangerTextDark}}" />
             <Entry Text="{Binding NewBank}" Placeholder="Bank name" AutomationId="SendAchBankEntry" />
+            <Label Text="{Binding BankError}" AutomationId="SendAchBankError"
+                   IsVisible="{Binding BankError, Converter={StaticResource StringToBoolConverter}}"
+                   TextColor="{AppThemeBinding Light={StaticResource DangerText}, Dark={StaticResource DangerTextDark}}" />
             <Entry Text="{Binding NewRouting}" Placeholder="Routing (9 digits)" Keyboard="Numeric" MaxLength="9"
                    AutomationId="SendAchRoutingEntry" />
+            <Label Text="{Binding RoutingError}" AutomationId="SendAchRoutingError"
+                   IsVisible="{Binding RoutingError, Converter={StaticResource StringToBoolConverter}}"
+                   TextColor="{AppThemeBinding Light={StaticResource DangerText}, Dark={StaticResource DangerTextDark}}" />
             <Entry Text="{Binding NewAccount}" Placeholder="Account number" Keyboard="Numeric"
                    AutomationId="SendAchAccountEntry" />
+            <Label Text="{Binding AccountError}" AutomationId="SendAchAccountError"
+                   IsVisible="{Binding AccountError, Converter={StaticResource StringToBoolConverter}}"
+                   TextColor="{AppThemeBinding Light={StaticResource DangerText}, Dark={StaticResource DangerTextDark}}" />
             <Picker Title="Account type" ItemsSource="{Binding AccountTypes}" SelectedItem="{Binding NewAccountType}"
                     AutomationId="SendAchAccountTypePicker" />
+            <Label Text="{Binding AccountTypeError}" AutomationId="SendAchAccountTypeError"
+                   IsVisible="{Binding AccountTypeError, Converter={StaticResource StringToBoolConverter}}"
+                   TextColor="{AppThemeBinding Light={StaticResource DangerText}, Dark={StaticResource DangerTextDark}}" />
             <Entry Text="{Binding NewMemo}" Placeholder="Memo (optional)" AutomationId="SendAchMemoEntry" />
+            <Label Text="{Binding MemoError}" AutomationId="SendAchMemoError"
+                   IsVisible="{Binding MemoError, Converter={StaticResource StringToBoolConverter}}"
+                   TextColor="{AppThemeBinding Light={StaticResource DangerText}, Dark={StaticResource DangerTextDark}}" />
             <Button Text="Save payee" Command="{Binding AddRecipientCommand}" AutomationId="SendAchSavePayeeButton" />
 
             <!-- Full validation error list: every failing field, not just the first. -->

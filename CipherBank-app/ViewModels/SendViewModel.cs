@@ -102,6 +102,34 @@ public partial class SendViewModel : ObservableObject
     [ObservableProperty]
     private bool hasRecipientFormErrors;
 
+    [ObservableProperty]
+    private string nameError = string.Empty;
+
+    [ObservableProperty]
+    private string holderError = string.Empty;
+
+    [ObservableProperty]
+    private string bankError = string.Empty;
+
+    [ObservableProperty]
+    private string routingError = string.Empty;
+
+    [ObservableProperty]
+    private string accountError = string.Empty;
+
+    [ObservableProperty]
+    private string accountTypeError = string.Empty;
+
+    [ObservableProperty]
+    private string memoError = string.Empty;
+
+    /// <summary>
+    /// Returns the message for <paramref name="field"/>, or empty when that field is clean.
+    /// Use: High (every Save payee attempt). Scope: recipient form error mapping.
+    /// </summary>
+    private static string MessageFor(IReadOnlyList<AchValidationError> errors, AchRecipientField field)
+        => errors.FirstOrDefault(e => e.Field == field)?.Message ?? string.Empty;
+
     partial void OnSelectedRecipientChanged(AchRecipientRow? value)
     {
         if (value is not null)
@@ -133,7 +161,7 @@ public partial class SendViewModel : ObservableObject
     [RelayCommand]
     private async Task AddRecipientAsync()
     {
-        IReadOnlyList<string> errors = AchRecipientValidation.ValidateAll(
+        IReadOnlyList<AchValidationError> errors = AchRecipientValidation.ValidateDetailed(
             NewRecipientName,
             NewHolder,
             NewBank,
@@ -141,13 +169,7 @@ public partial class SendViewModel : ObservableObject
             NewAccount,
             NewAccountType,
             NewMemo);
-        RecipientFormErrors.Clear();
-        foreach (string error in errors)
-        {
-            RecipientFormErrors.Add(error);
-        }
-
-        HasRecipientFormErrors = RecipientFormErrors.Count > 0;
+        ApplyRecipientFormErrors(errors);
         if (HasRecipientFormErrors)
         {
             return;
@@ -177,6 +199,30 @@ public partial class SendViewModel : ObservableObject
         NewAccount = string.Empty;
         NewAccountType = "checking";
         NewMemo = string.Empty;
+    }
+
+    /// <summary>
+    /// Publishes validator output to the form: the summary list plus each field's inline
+    /// error. Empty string means the field is clean; the set resets on every Save attempt,
+    /// so a successful save clears all seven inline errors and the summary.
+    /// Use: High (every Save payee attempt). Scope: SendPage recipient form.
+    /// </summary>
+    private void ApplyRecipientFormErrors(IReadOnlyList<AchValidationError> errors)
+    {
+        RecipientFormErrors.Clear();
+        foreach (AchValidationError error in errors)
+        {
+            RecipientFormErrors.Add(error.Message);
+        }
+
+        NameError = MessageFor(errors, AchRecipientField.Name);
+        HolderError = MessageFor(errors, AchRecipientField.Holder);
+        BankError = MessageFor(errors, AchRecipientField.Bank);
+        RoutingError = MessageFor(errors, AchRecipientField.Routing);
+        AccountError = MessageFor(errors, AchRecipientField.Account);
+        AccountTypeError = MessageFor(errors, AchRecipientField.AccountType);
+        MemoError = MessageFor(errors, AchRecipientField.Memo);
+        HasRecipientFormErrors = errors.Count > 0;
     }
 
     [RelayCommand]
