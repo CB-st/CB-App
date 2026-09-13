@@ -3,6 +3,7 @@
 // </copyright>
 
 using CipherBank_app.Persist;
+using CipherBank_app.Resources;
 using FluentAssertions;
 using Xunit;
 
@@ -10,6 +11,68 @@ namespace CipherBank_app.Tests.Persist;
 
 public class AchRecipientValidationTests
 {
+    /// <summary>
+    /// Every simultaneous failure is reported, in stable field order:
+    /// name, holder, bank, routing, account, account type, memo.
+    /// Use: Medium (multi-error contract regression). Scope: AchRecipientValidation.
+    /// </summary>
+    [Fact]
+    public void ValidateAll_ReportsEveryFailureInFieldOrder()
+    {
+        IReadOnlyList<string> errors = AchRecipientValidation.ValidateAll(
+            " ",
+            " ",
+            "Demo Bank",
+            "02100",
+            "12",
+            "moneymarket",
+            new string('x', AchRecipientValidation.MemoMaxLength + 1));
+
+        errors.Should().Equal(
+            UserFacingStrings.AchEnterPayeeName,
+            UserFacingStrings.AchEnterAccountHolderName,
+            UserFacingStrings.AchRoutingNumberMustBeDigits(AchRecipientValidation.RoutingNumberDigitCount),
+            UserFacingStrings.AchEnterValidAccountNumber,
+            UserFacingStrings.AchAccountTypeMustBeCheckingOrSavings,
+            UserFacingStrings.AchMemoMustBeMaxLength(AchRecipientValidation.MemoMaxLength));
+    }
+
+    [Fact]
+    public void ValidateAll_ValidInput_ReturnsEmpty()
+    {
+        AchRecipientValidation.ValidateAll(
+            "Rent LLC",
+            "Jane Doe",
+            "Demo Bank",
+            "021000021",
+            "12345678",
+            "checking",
+            "April rent").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validate_FirstError_MatchesValidateAllHead()
+    {
+        string? first = AchRecipientValidation.Validate(
+            " ",
+            "Jane Doe",
+            "Demo Bank",
+            "02100",
+            "12345678",
+            "checking");
+
+        IReadOnlyList<string> all = AchRecipientValidation.ValidateAll(
+            " ",
+            "Jane Doe",
+            "Demo Bank",
+            "02100",
+            "12345678",
+            "checking",
+            null);
+
+        first.Should().Be(all[0]);
+    }
+
     [Fact]
     public void Validate_AcceptsCompleteCheckingAccount()
     {

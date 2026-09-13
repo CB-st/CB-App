@@ -29,10 +29,29 @@ public static class AchRecipientValidation
         => Validate(name, holder, bank, routing, account, accountType, null);
 
     /// <summary>
-    /// Validates ACH payee fields for create/edit; returns the first user-facing error or null when valid.
+    /// Validates ACH payee fields for create/edit; returns the first user-facing error or null
+    /// when valid. Convenience head of <see cref="ValidateAll"/> for single-message callers.
     /// Use: High (every recipient save). Scope: RecipientPicker / Persist callers.
     /// </summary>
     public static string? Validate(
+        string name,
+        string holder,
+        string bank,
+        string routing,
+        string account,
+        string accountType,
+        string? memo)
+    {
+        IReadOnlyList<string> errors = ValidateAll(name, holder, bank, routing, account, accountType, memo);
+        return errors.Count == 0 ? null : errors[0];
+    }
+
+    /// <summary>
+    /// Validates ACH payee fields and returns every user-facing error, in stable field order:
+    /// name, holder, bank, routing, account, account type, memo. Empty when valid.
+    /// Use: High (recipient form submit). Scope: RecipientPicker / Persist callers.
+    /// </summary>
+    public static IReadOnlyList<string> ValidateAll(
         string name,
         string holder,
         string bank,
@@ -51,7 +70,7 @@ public static class AchRecipientValidation
             ValidateAccountType(accountType),
             ValidateMemo(memo),
         ];
-        return Array.Find(errors, static e => e is not null);
+        return [.. errors.Where(static e => e is not null)!];
     }
 
     /// <summary>
