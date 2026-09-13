@@ -26,6 +26,16 @@ flowchart LR
 
 `StoryBacklogTests` lists remaining `CB-*` entries as skipped Theories. Catalog: `CipherBank-app.E2ETests/Stories/StoryCatalog.cs`.
 
+### Known device-coverage gaps (deliberate)
+
+- **Theme toggle (Profile appearance / Settings theme).** ViewModels route theme changes
+  through the injected `IAppThemeSetter` port (enforced by CB1005), and the adapter is one
+  line of MAUI glue. Asserting a rendered theme change on device requires color sampling or
+  activity-recreation checks that do not earn their runtime; promote to a story only if a
+  theme regression ever ships. Startup recipient seeding needs no extra story: the
+  executable `US_HOM_05_SND_01` fact already asserts the config seed payees are visible on
+  the Send surface after package reset.
+
 ## Expo testID ↔ MAUI AutomationId
 
 See `Stories/AutomationIdMap.cs`. New controls should prefer **identical** strings where possible.
