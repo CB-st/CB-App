@@ -59,5 +59,6 @@ Day-to-day implementer rules (function docs, ownership, complexity, E2E, **Sonar
 | [config/README.md](config/README.md) | Build config, analyzers, tooling |
 | [config/sonar/README.md](config/sonar/README.md) | Sonar quality-gate policy and local SonarQube-for-IDE setup |
 | [STACK_STAGED_WORK.md](STACK_STAGED_WORK.md) | Cross-stack goals that land on a later slice (do not backfill earlier PRs) |
+| [review/REVIEW_DECISIONS.md](review/REVIEW_DECISIONS.md) | Declined/deviated reviewer asks with researched rationale |
 
 Reusable scaffolds are indexed in [../templates/README.md](../templates/README.md).

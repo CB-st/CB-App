@@ -5,33 +5,34 @@
 namespace CipherBank_app.Configuration;
 
 /// <summary>Non-secret algorithm parameters for custody blob encryption.</summary>
-public sealed class CryptographyOptions
+public sealed class CryptographyOptions : IOptionsSection
 {
-    public static string SectionName { get; } = "Cryptography";
-
     /// <summary>AES-GCM nonce size required by the existing custody blob format.</summary>
-    public static int AesGcmNonceSizeBytes { get; } = 12;
+    public const int AesGcmNonceSizeBytes = 12;
 
     /// <summary>Minimum authentication tag size accepted for AES-GCM.</summary>
-    public static int MinTagSizeBytes { get; } = 12;
+    public const int MinTagSizeBytes = 12;
 
     /// <summary>Maximum authentication tag size accepted for AES-GCM.</summary>
-    public static int MaxTagSizeBytes { get; } = 16;
+    public const int MaxTagSizeBytes = 16;
 
     /// <summary>AES-128 key length in bytes.</summary>
-    public static int Aes128KeySizeBytes { get; } = 16;
+    public const int Aes128KeySizeBytes = 16;
 
     /// <summary>AES-192 key length in bytes.</summary>
-    public static int Aes192KeySizeBytes { get; } = 24;
+    public const int Aes192KeySizeBytes = 24;
 
     /// <summary>AES-256 key length in bytes.</summary>
-    public static int Aes256KeySizeBytes { get; } = 32;
+    public const int Aes256KeySizeBytes = 32;
 
     /// <summary>Minimum PBKDF2 salt size compatible with the custody blob format.</summary>
-    public static int MinSaltSizeBytes { get; } = 16;
+    public const int MinSaltSizeBytes = 16;
 
     /// <summary>Minimum PBKDF2 iteration count compatible with the custody blob format.</summary>
-    public static int MinPbkdf2Iterations { get; } = 210_000;
+    public const int MinPbkdf2Iterations = 210_000;
+
+    /// <inheritdoc />
+    public static string SectionName => "Cryptography";
 
     /// <summary>Default values compatible with the existing custody blob format.</summary>
     public static CryptographyOptions Default => new();
