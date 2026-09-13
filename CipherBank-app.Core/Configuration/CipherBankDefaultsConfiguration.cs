@@ -21,14 +21,26 @@ public static class CipherBankDefaultsConfiguration
     public static IConfigurationRoot BuildForHost(bool isDevelopment, bool isWindows)
         => Build(isDevelopment ? "Development" : "Production", isWindows);
 
+    /// <summary>Builds repository defaults without optional overlays.</summary>
+    /// <returns>A configuration root owned by the caller.</returns>
+    public static IConfigurationRoot Build() => Build(null, false);
+
+    /// <summary>Builds repository defaults with one optional environment overlay.</summary>
+    /// <returns>A configuration root owned by the caller.</returns>
+    public static IConfigurationRoot Build(string? environment) => Build(environment, false);
+
+    /// <summary>Builds repository defaults with the optional Windows overlay.</summary>
+    /// <returns>A configuration root owned by the caller.</returns>
+    public static IConfigurationRoot Build(bool windowsOverlay) => Build(null, windowsOverlay);
+
     /// <summary>
     /// Builds base defaults and then applies optional environment and Windows overlays.
     /// Use: High (host startup and composition tests). Scope: process configuration.
     /// </summary>
     /// <returns>A configuration root owned by the caller.</returns>
     public static IConfigurationRoot Build(
-        string? environment = null,
-        bool windowsOverlay = false)
+        string? environment,
+        bool windowsOverlay)
     {
         Assembly assembly = typeof(CipherBankDefaultsConfiguration).Assembly;
         ConfigurationBuilder builder = new ConfigurationBuilder();

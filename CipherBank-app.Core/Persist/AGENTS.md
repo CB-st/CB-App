@@ -50,7 +50,8 @@ override CI Sonar: new issues on Persist code still fail the gate.
   Duplicate submissions share the accepted job's completion task. Caller and
   shutdown cancellation reach queued/running work; failures remain observable
   through `EnqueueAsync` and `DrainAsync`.
-- ACH digit counts are `const` (Sonar S3962). Public names stay PascalCase.
+- Public ACH bounds are static read-only properties so consuming assemblies do
+  not inline validation policy. Public names stay PascalCase.
 - Design-time `IDesignTimeDbContextFactory.CreateDbContext(string[] args)`
   keeps `args` (dotnet ef passes an empty array) and does not parse custom
   switches yet.
