@@ -4,15 +4,19 @@
 
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Text;
 
 namespace CipherBank_app.Analyzers;
 
 /// <summary>
-/// Rejects direct MAUI and task-dispatch globals from ViewModels.
-/// Use: High (every MAUI compilation). Scope: files below a ViewModels directory.
+/// Rejects direct MAUI and task-dispatch globals from ViewModels. Detection covers
+/// invocations, property reads, and assignments by flagging the root global reference
+/// (for example <c>Application.Current</c>). Like the other structure analyzers, it runs
+/// as a compilation action over both compiled trees and AdditionalFiles so the CI
+/// structure pass sees ViewModels even when the MAUI head is not compiled.
+/// Use: High (every compilation). Scope: files below a ViewModels directory.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class NoViewModelPlatformGlobalsAnalyzer : DiagnosticAnalyzer
@@ -33,7 +37,7 @@ public sealed class NoViewModelPlatformGlobalsAnalyzer : DiagnosticAnalyzer
         => ImmutableArray.Create(CipherBankDiagnostics.ViewModelPlatformGlobal);
 
     /// <summary>
-    /// Registers invocation analysis for ViewModel source files.
+    /// Registers a compilation action over compilation trees and additional files.
     /// Use: High (every compilation). Scope: this analyzer.
     /// </summary>
     /// <param name="context">Analyzer initialization context.</param>
@@ -41,55 +45,103 @@ public sealed class NoViewModelPlatformGlobalsAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
+        context.RegisterCompilationAction(AnalyzeCompilation);
     }
 
     /// <summary>
-    /// Reports a prohibited global invocation from a ViewModel file.
-    /// Use: High (each invocation). Scope: ViewModel source.
+    /// Reports prohibited globals in ViewModel compilation trees and additional C# files.
+    /// Use: High (every compilation). Scope: this analyzer.
     /// </summary>
-    private static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
+    private static void AnalyzeCompilation(CompilationAnalysisContext context)
     {
-        string path = context.Node.SyntaxTree.FilePath.Replace('\\', '/');
-        if (!path.Contains("/ViewModels/", StringComparison.OrdinalIgnoreCase))
+        foreach (SyntaxTree tree in context.Compilation.SyntaxTrees)
         {
-            return;
+            if (!IsViewModelPath(tree.FilePath))
+            {
+                continue;
+            }
+
+            foreach ((MemberAccessExpressionSyntax access, string root) in ProhibitedAccesses(tree, context.CancellationToken))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    CipherBankDiagnostics.ViewModelPlatformGlobal,
+                    access.GetLocation(),
+                    root));
+            }
         }
 
-        InvocationExpressionSyntax invocation = (InvocationExpressionSyntax)context.Node;
-        string? root = GetRootIdentifier(invocation.Expression);
-        if (root is null || !ProhibitedRoots.Contains(root))
+        foreach (AdditionalText file in context.Options.AdditionalFiles)
         {
-            return;
+            ReportAdditionalFile(context, file);
         }
-
-        if (string.Equals(root, "Task", StringComparison.Ordinal)
-            && invocation.Expression is MemberAccessExpressionSyntax taskMember
-            && !string.Equals(taskMember.Name.Identifier.ValueText, "Run", StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        context.ReportDiagnostic(Diagnostic.Create(
-            CipherBankDiagnostics.ViewModelPlatformGlobal,
-            invocation.GetLocation(),
-            root));
     }
 
     /// <summary>
-    /// Returns the leftmost identifier in a member-access chain.
-    /// Use: High (candidate invocations). Scope: this analyzer.
+    /// Reports prohibited globals in one additional ViewModel C# file.
+    /// Use: High (every additional file). Scope: unbuilt sibling projects.
     /// </summary>
-    private static string? GetRootIdentifier(ExpressionSyntax expression)
+    private static void ReportAdditionalFile(CompilationAnalysisContext context, AdditionalText file)
     {
-        ExpressionSyntax current = expression;
-        while (current is MemberAccessExpressionSyntax memberAccess)
+        if (!IsViewModelPath(file.Path)
+            || !AdditionalSource.IsOutsideCompilation(context.Compilation, file.Path))
         {
-            current = memberAccess.Expression;
+            return;
         }
 
-        return current is IdentifierNameSyntax identifier
-            ? identifier.Identifier.ValueText
-            : null;
+        SyntaxTree tree;
+        SourceText text;
+        if (!AdditionalSource.TryParseCSharp(file, context.CancellationToken, out tree, out text))
+        {
+            return;
+        }
+
+        foreach ((MemberAccessExpressionSyntax access, string root) in ProhibitedAccesses(tree, context.CancellationToken))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                CipherBankDiagnostics.ViewModelPlatformGlobal,
+                AdditionalSource.CreateLocation(file.Path, text, access.Span),
+                root));
+        }
     }
+
+    /// <summary>
+    /// Yields each member access whose leftmost identifier is a prohibited global,
+    /// reporting once per chain at the root reference. <c>Task</c> only bans <c>Run</c>
+    /// so cancellable helpers such as <c>Task.Delay</c> remain available.
+    /// Use: High (every ViewModel tree). Scope: this analyzer.
+    /// </summary>
+    private static IEnumerable<(MemberAccessExpressionSyntax Access, string Root)> ProhibitedAccesses(
+        SyntaxTree tree,
+        CancellationToken cancellationToken)
+    {
+        foreach (SyntaxNode node in tree.GetRoot(cancellationToken).DescendantNodes())
+        {
+            if (node is not MemberAccessExpressionSyntax access
+                || access.Expression is not IdentifierNameSyntax identifier)
+            {
+                continue;
+            }
+
+            string root = identifier.Identifier.ValueText;
+            if (!ProhibitedRoots.Contains(root))
+            {
+                continue;
+            }
+
+            if (string.Equals(root, "Task", StringComparison.Ordinal)
+                && !string.Equals(access.Name.Identifier.ValueText, "Run", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            yield return (access, root);
+        }
+    }
+
+    /// <summary>
+    /// True when the path sits below a ViewModels directory.
+    /// Use: High (every tree and additional file). Scope: this analyzer.
+    /// </summary>
+    private static bool IsViewModelPath(string path)
+        => path.Replace('\\', '/').Contains("/ViewModels/", StringComparison.OrdinalIgnoreCase);
 }

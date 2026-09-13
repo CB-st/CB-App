@@ -204,6 +204,37 @@ public class SyncJobSchedulerTests
     }
 
     [Fact]
+    public async Task Dispose_QueuedJob_IsCanceledAndNeverStarts()
+    {
+        SyncJobScheduler queue = new SyncJobScheduler(
+            TaskScheduler.Default,
+            new SyncSchedulerOptions { MaxConcurrency = 1 });
+        TaskCompletionSource blocker = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int queuedRuns = 0;
+
+        // Occupies the single slot and ignores its cancellation token so it can
+        // finish after Dispose, exercising the completion-time dispatch path.
+        Task running = queue.EnqueueAsync("running", SyncPriority.P1, _ => blocker.Task);
+        Task queued = queue.EnqueueAsync("queued", SyncPriority.P2, _ =>
+        {
+            Interlocked.Increment(ref queuedRuns);
+            return Task.CompletedTask;
+        });
+
+        queue.Dispose();
+
+        // Queued-but-unstarted work completes as canceled synchronously at disposal.
+        queued.IsCanceled.Should().BeTrue();
+        Func<Task> observeQueuedCancellation = () => queued;
+        await observeQueuedCancellation.Should().ThrowAsync<TaskCanceledException>();
+
+        // The running job finishing after disposal must not dispatch drained work.
+        blocker.SetResult();
+        await running;
+        Volatile.Read(ref queuedRuns).Should().Be(0);
+    }
+
+    [Fact]
     public void Unset_max_concurrency_resolves_to_half_processor_count()
     {
         SyncSchedulerOptions options = new SyncSchedulerOptions();
