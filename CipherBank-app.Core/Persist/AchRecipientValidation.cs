@@ -9,6 +9,8 @@ namespace CipherBank_app.Persist;
 /// <summary>ACH recipient field validation (Cora RecipientPickerModal parity).</summary>
 public static class AchRecipientValidation
 {
+    private const string MaskPrefix = "•••• ";
+
     public static int RoutingNumberDigitCount { get; } = 9;
 
     public static int AccountNumberMinDigits { get; } = 4;
@@ -41,9 +43,9 @@ public static class AchRecipientValidation
     {
         string?[] errors =
         [
-            RequireNonBlank(name, Strings.AchEnterPayeeName),
-            RequireNonBlank(holder, Strings.AchEnterAccountHolderName),
-            RequireNonBlank(bank, Strings.AchEnterBankName),
+            RequireNonBlank(name, UserFacingStrings.AchEnterPayeeName),
+            RequireNonBlank(holder, UserFacingStrings.AchEnterAccountHolderName),
+            RequireNonBlank(bank, UserFacingStrings.AchEnterBankName),
             ValidateRouting(routing),
             ValidateAccount(account),
             ValidateAccountType(accountType),
@@ -53,34 +55,23 @@ public static class AchRecipientValidation
     }
 
     /// <summary>
-    /// Masks an account number to trailing digits for display.
+    /// Masks an account number to trailing digits for display. Account masks preserve the
+    /// trimmed identifier's trailing characters, including any non-digits.
     /// Use: High (recipient lists). Scope: Persist UI mapping.
     /// </summary>
     public static string MaskAccount(string account)
     {
         string trimmed = account.Trim();
-        if (trimmed.Length <= MaskVisibleTrailingDigits)
-        {
-            return "•••• " + trimmed;
-        }
-
-        return "•••• " + trimmed[^MaskVisibleTrailingDigits..];
+        return MaskTrailing(trimmed, MaskPrefix + trimmed);
     }
 
     /// <summary>
-    /// Masks a routing number to trailing digits for display.
+    /// Masks a routing number to trailing digits for display. Routing masks normalize to
+    /// ASCII digits first and collapse short input to the bare mask glyphs.
     /// Use: High (recipient lists). Scope: Persist UI mapping.
     /// </summary>
     public static string MaskRouting(string routing)
-    {
-        string digits = DigitsOnly(routing);
-        if (digits.Length < MaskVisibleTrailingDigits)
-        {
-            return "••••";
-        }
-
-        return "•••• " + digits[^MaskVisibleTrailingDigits..];
-    }
+        => MaskTrailing(DigitsOnly(routing), "••••");
 
     /// <summary>
     /// Requires a non-blank string; returns <paramref name="message"/> when empty.
@@ -102,7 +93,7 @@ public static class AchRecipientValidation
             && trimmed.All(char.IsAsciiDigit);
         return exactDigits
             ? null
-            : Strings.AchRoutingNumberMustBeDigits(RoutingNumberDigitCount);
+            : UserFacingStrings.AchRoutingNumberMustBeDigits(RoutingNumberDigitCount);
     }
 
     /// <summary>
@@ -111,7 +102,7 @@ public static class AchRecipientValidation
     /// </summary>
     private static string? ValidateAccount(string account)
         => string.IsNullOrWhiteSpace(account) || account.Trim().Length < AccountNumberMinDigits
-            ? Strings.AchEnterValidAccountNumber
+            ? UserFacingStrings.AchEnterValidAccountNumber
             : null;
 
     /// <summary>
@@ -123,7 +114,7 @@ public static class AchRecipientValidation
         string type = accountType.Trim().ToUpperInvariant();
         return type is "CHECKING" or "SAVINGS"
             ? null
-            : Strings.AchAccountTypeMustBeCheckingOrSavings;
+            : UserFacingStrings.AchAccountTypeMustBeCheckingOrSavings;
     }
 
     /// <summary>
@@ -132,7 +123,7 @@ public static class AchRecipientValidation
     /// </summary>
     private static string? ValidateMemo(string? memo)
         => memo is not null && memo.Length > MemoMaxLength
-            ? Strings.AchMemoMustBeMaxLength(MemoMaxLength)
+            ? UserFacingStrings.AchMemoMustBeMaxLength(MemoMaxLength)
             : null;
 
     /// <summary>
@@ -141,4 +132,16 @@ public static class AchRecipientValidation
     /// </summary>
     private static string DigitsOnly(string value)
         => new(value.Where(char.IsAsciiDigit).ToArray());
+
+    /// <summary>
+    /// Shared trailing-digit mask core: shows the last <see cref="MaskVisibleTrailingDigits"/>
+    /// characters of <paramref name="source"/>, or <paramref name="shortResult"/> when the
+    /// source is shorter. Callers own preprocessing (trim vs digits-only) and the short-input
+    /// policy; those are named invariants, not incidental differences.
+    /// Use: High (MaskAccount/MaskRouting). Scope: this helper.
+    /// </summary>
+    private static string MaskTrailing(string source, string shortResult)
+        => source.Length < MaskVisibleTrailingDigits
+            ? shortResult
+            : MaskPrefix + source[^MaskVisibleTrailingDigits..];
 }
