@@ -43,6 +43,23 @@ public sealed class WalletRepositoryTests
         (await repo.ListAsync()).Should().ContainSingle().Which.Id.Should().Be("w2");
     }
 
+    /// <summary>
+    /// Repository reads must propagate caller cancellation into database initialization and EF.
+    /// Use: Medium (navigation cancellation). Scope: WalletRepository.
+    /// </summary>
+    [Fact]
+    public async Task ListAsync_CanceledToken_ThrowsOperationCanceledException()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cb-wallet-" + Guid.NewGuid().ToString("N") + ".db");
+        WalletRepository repo = new WalletRepository(new LocalDb(new FileInfo(path)));
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        Func<Task> act = async () => await repo.ListAsync(cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
     private static LocalWalletRow HdWallet(
         string id,
         string symbol,

@@ -185,4 +185,23 @@ public class RecipientRepositoryTests
         await repo.SeedDefaultsIfEmptyAsync();
         (await repo.ListAsync()).Should().BeEmpty();
     }
+
+    /// <summary>
+    /// Recipient reads must propagate caller cancellation into database initialization and EF.
+    /// Use: Medium (payee navigation cancellation). Scope: RecipientRepository.
+    /// </summary>
+    [Fact]
+    public async Task ListAsync_CanceledToken_ThrowsOperationCanceledException()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cb-test-" + Guid.NewGuid().ToString("N") + ".db");
+        RecipientRepository repo = new RecipientRepository(
+            new LocalDb(new FileInfo(path)),
+            EmbeddedAppSettings.BindPersistence());
+        using CancellationTokenSource cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        Func<Task> act = async () => await repo.ListAsync(cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
 }

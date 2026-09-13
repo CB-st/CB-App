@@ -58,11 +58,11 @@ public sealed class RecipientRepository : IRecipientRepository
         _timeProvider = timeProvider;
     }
 
-    public Task EnsureSchemaAsync() => _db.InitializeAsync();
+    public Task EnsureSchemaAsync(CancellationToken ct = default) => _db.InitializeAsync(ct);
 
-    public async Task<IReadOnlyList<AchRecipientRow>> ListAsync()
+    public async Task<IReadOnlyList<AchRecipientRow>> ListAsync(CancellationToken ct = default)
     {
-        CipherBankDbContext context = await _db.CreateContextAsync().ConfigureAwait(false);
+        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
         {
             return await context.Recipients
@@ -80,7 +80,7 @@ public sealed class RecipientRepository : IRecipientRepository
                     entity.AccountMask,
                     entity.RoutingMask,
                     entity.CreatedAt))
-                .ToListAsync()
+                .ToListAsync(ct)
                 .ConfigureAwait(false);
         }
     }
@@ -88,26 +88,26 @@ public sealed class RecipientRepository : IRecipientRepository
     /// <summary>
     /// Upserts payee metadata and masks only; cleartext account/routing inputs never enter the EF model.
     /// </summary>
-    public Task UpsertAsync(AchRecipientRow row)
+    public Task UpsertAsync(AchRecipientRow row, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(row);
-        return UpsertCoreAsync(row);
+        return UpsertCoreAsync(row, ct);
     }
 
-    public async Task DeleteAsync(string id)
+    public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        CipherBankDbContext context = await _db.CreateContextAsync().ConfigureAwait(false);
+        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
         {
-            RecipientEntity? entity = await context.Recipients.FindAsync(id).ConfigureAwait(false);
+            RecipientEntity? entity = await context.Recipients.FindAsync([id], ct).ConfigureAwait(false);
             if (entity is null)
             {
                 return;
             }
 
             context.Recipients.Remove(entity);
-            await context.SaveChangesAsync().ConfigureAwait(false);
+            await context.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }
 
@@ -115,7 +115,7 @@ public sealed class RecipientRepository : IRecipientRepository
     /// Inserts configured default payees in one transaction when the table is empty.
     /// Use: High (first-run and concurrent hydration). Scope: RecipientRepository.
     /// </summary>
-    public async Task SeedDefaultsIfEmptyAsync()
+    public async Task SeedDefaultsIfEmptyAsync(CancellationToken ct = default)
     {
         if (_options.DefaultRecipients.Count == 0)
         {
@@ -123,15 +123,15 @@ public sealed class RecipientRepository : IRecipientRepository
         }
 
         DateTimeOffset now = _timeProvider.GetUtcNow();
-        CipherBankDbContext context = await _db.CreateContextAsync().ConfigureAwait(false);
+        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
         {
             IDbContextTransaction transaction = await context.Database
-                .BeginTransactionAsync(IsolationLevel.Serializable)
+                .BeginTransactionAsync(IsolationLevel.Serializable, ct)
                 .ConfigureAwait(false);
             await using (transaction)
             {
-                if (await context.Recipients.AnyAsync().ConfigureAwait(false))
+                if (await context.Recipients.AnyAsync(ct).ConfigureAwait(false))
                 {
                     return;
                 }
@@ -151,16 +151,20 @@ public sealed class RecipientRepository : IRecipientRepository
                             seed.Memo,
                             null,
                             null,
-                            now)).ConfigureAwait(false);
+                            now),
+                        ct).ConfigureAwait(false);
                 }
 
-                await context.SaveChangesAsync().ConfigureAwait(false);
-                await transaction.CommitAsync().ConfigureAwait(false);
+                await context.SaveChangesAsync(ct).ConfigureAwait(false);
+                await transaction.CommitAsync(ct).ConfigureAwait(false);
             }
         }
     }
 
-    private static async Task ApplyRowAsync(CipherBankDbContext context, AchRecipientRow row)
+    private static async Task ApplyRowAsync(
+        CipherBankDbContext context,
+        AchRecipientRow row,
+        CancellationToken ct)
     {
         // Prefer fresh cleartext: editing a listed row still carries prior masks.
         string? accountMask = string.IsNullOrWhiteSpace(row.Account)
@@ -170,7 +174,7 @@ public sealed class RecipientRepository : IRecipientRepository
             ? row.RoutingMask
             : AchRecipientValidation.MaskRouting(row.Routing);
 
-        RecipientEntity? entity = await context.Recipients.FindAsync(row.Id).ConfigureAwait(false);
+        RecipientEntity? entity = await context.Recipients.FindAsync([row.Id], ct).ConfigureAwait(false);
         if (entity is null)
         {
             entity = new RecipientEntity { Id = row.Id, CreatedAt = row.CreatedAt };
@@ -188,13 +192,13 @@ public sealed class RecipientRepository : IRecipientRepository
         entity.RoutingMask = routingMask;
     }
 
-    private async Task UpsertCoreAsync(AchRecipientRow row)
+    private async Task UpsertCoreAsync(AchRecipientRow row, CancellationToken ct)
     {
-        CipherBankDbContext context = await _db.CreateContextAsync().ConfigureAwait(false);
+        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
         {
-            await ApplyRowAsync(context, row).ConfigureAwait(false);
-            await context.SaveChangesAsync().ConfigureAwait(false);
+            await ApplyRowAsync(context, row, ct).ConfigureAwait(false);
+            await context.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }
 }
