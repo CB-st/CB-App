@@ -6,6 +6,7 @@ using CipherBank_app.Custody;
 using CipherBank_app.Persist;
 using CipherBank_app.Services;
 using CipherBank_app.Session;
+using Serilog;
 
 namespace CipherBank_app;
 
@@ -25,7 +26,8 @@ public partial class App : Application
         IAppSession session,
         ILocalDb db,
         ICustodyService custody,
-        AppIdleLockService idleLock)
+        AppIdleLockService idleLock,
+        IRecipientSeedInitializer recipientSeeds)
     {
         InitializeComponent();
         _services = services;
@@ -34,6 +36,12 @@ public partial class App : Application
         _custody = custody;
         _idleLock = idleLock;
         UserAppTheme = AppTheme.Dark;
+
+        // MAUI has no async build hook (IMauiInitializeService is synchronous), so the
+        // App constructor is the defined async startup path: start the initialization
+        // task after the provider is built and surface failures through the log.
+        // SendViewModel re-runs the idempotent initializer before recipient-list use.
+        _ = SeedRecipientsAsync(recipientSeeds);
     }
 
     /// <summary>
@@ -43,5 +51,22 @@ public partial class App : Application
     protected override Window CreateWindow(IActivationState? activationState)
     {
         return new Window(new AppShell(_services, _session, _db, _custody, _idleLock));
+    }
+
+    /// <summary>
+    /// Seeds configured default recipients into a new database at startup.
+    /// Failures are logged and never fatal; seeding is idempotent per configured ID.
+    /// Use: Low (once per cold start). Scope: app startup.
+    /// </summary>
+    private static async Task SeedRecipientsAsync(IRecipientSeedInitializer recipientSeeds)
+    {
+        try
+        {
+            await recipientSeeds.InitializeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Recipient seed initialization failed");
+        }
     }
 }

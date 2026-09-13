@@ -109,6 +109,41 @@ public sealed class ProductTreeStructureAnalyzerTests
         await test.RunAsync();
     }
 
+    [Fact]
+    public async Task LiveUnbuiltCsharpFiles_HaveNoViewModelPlatformGlobals()
+    {
+        CSharpAnalyzerTest<NoViewModelPlatformGlobalsAnalyzer, DefaultVerifier> test = new()
+        {
+            CompilerDiagnostics = CompilerDiagnostics.None,
+            TestCode = "class Wallet { }",
+        };
+        AttachAll(test, ProductTreeRepoRoot.UnbuiltCsharpFiles());
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task ReportsViewModelGlobalWhenInjectedIntoLiveTree()
+    {
+        CSharpAnalyzerTest<NoViewModelPlatformGlobalsAnalyzer, DefaultVerifier> test = new()
+        {
+            CompilerDiagnostics = CompilerDiagnostics.None,
+            TestCode = "class Wallet { }",
+        };
+        AttachAll(test, ProductTreeRepoRoot.UnbuiltCsharpFiles());
+        test.TestState.AdditionalFiles.Add((
+            "CipherBank-app/ViewModels/InjectedThemeViewModel.cs",
+            """
+            class InjectedThemeViewModel
+            {
+                void Apply()
+                {
+                    {|CB1005:Application.Current|}.UserAppTheme = 1;
+                }
+            }
+            """));
+        await test.RunAsync();
+    }
+
     /// <summary>
     /// Attaches one on-disk product file as an additional analyzer input.
     /// Use: Low (structure Facts). Scope: this test class.

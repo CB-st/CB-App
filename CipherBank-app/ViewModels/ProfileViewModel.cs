@@ -56,6 +56,7 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
     private readonly IBackupFileService _backupFiles;
     private readonly IPosCardSelectionStore _cardSelection;
     private readonly IUiDispatcher _dispatcher;
+    private readonly IAppThemeSetter _themeSetter;
     private CancellationTokenSource? _mnemonicClearCts;
 
     private readonly TimeProvider _timeProvider;
@@ -76,6 +77,7 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
         TimeProvider timeProvider,
         IPosCardSelectionStore cardSelection,
         IUiDispatcher dispatcher,
+        IAppThemeSetter themeSetter,
         ICoraLineProvider coraLines)
     {
         _timeProvider = timeProvider;
@@ -93,6 +95,7 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
         _backupFiles = backupFiles;
         _cardSelection = cardSelection;
         _dispatcher = dispatcher;
+        _themeSetter = themeSetter;
         CoraLine = coraLines.GetLine("profile");
         foreach (string a in AppearanceChoices)
         {
@@ -291,9 +294,9 @@ public partial class ProfileViewModel : ObservableObject, IDisposable
 
         bool pushed = await _prefsSync.SaveAndPushAsync(prefs);
         _session.IdleMs = prefs.LockIdleSeconds * 1000;
-        Application.Current!.UserAppTheme = Appearance.Equals("light", StringComparison.OrdinalIgnoreCase)
+        _themeSetter.SetUserAppTheme(Appearance.Equals("light", StringComparison.OrdinalIgnoreCase)
             ? AppTheme.Light
-            : AppTheme.Dark;
+            : AppTheme.Dark);
         await _dialogs.ShowAlertAsync(
             "Saved",
             pushed ? "Preferences updated." : "Saved on device. Cloud sync failed — will retry later.");

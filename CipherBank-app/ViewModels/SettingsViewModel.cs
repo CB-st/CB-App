@@ -28,6 +28,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly INavigationService _navigation;
     private readonly IDialogService _dialog;
     private readonly IHealthCheckClient _healthCheck;
+    private readonly IAppThemeSetter _themeSetter;
     private CancellationTokenSource? _cts;
     private bool _disposed;
 
@@ -82,7 +83,8 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         IAppSession appSession,
         INavigationService navigation,
         IDialogService dialog,
-        IHealthCheckClient healthCheck)
+        IHealthCheckClient healthCheck,
+        IAppThemeSetter themeSetter)
     {
         _logger = logger;
         _settings = settings;
@@ -91,6 +93,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         _navigation = navigation;
         _dialog = dialog;
         _healthCheck = healthCheck;
+        _themeSetter = themeSetter;
 
         // Load current settings
         LoadSettings();
@@ -419,17 +422,12 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
 
     private void ApplyTheme()
     {
-        if (Application.Current == null)
-        {
-            return;
-        }
-
-        Application.Current.UserAppTheme = ThemeMode switch
+        _themeSetter.SetUserAppTheme(ThemeMode switch
         {
             "Light" => AppTheme.Light,
             "Dark" => AppTheme.Dark,
             _ => AppTheme.Unspecified,
-        };
+        });
 
         LogAppliedTheme(_logger, ThemeMode);
     }
