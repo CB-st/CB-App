@@ -18,7 +18,14 @@ public sealed class ConfigSeedPayeeIdTests
     public void PersistenceDefaultRecipients_UseStableConfigIdsNotGuids()
     {
         string json = File.ReadAllText(FindDevelopmentAppSettings());
-        using JsonDocument document = JsonDocument.Parse(json);
+
+        // Mirror the runtime configuration reader, which skips // comments in appsettings files.
+        JsonDocumentOptions options = new()
+        {
+            CommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+        };
+        using JsonDocument document = JsonDocument.Parse(json, options);
         JsonElement rows = document.RootElement.GetProperty("Persistence").GetProperty("DefaultRecipients");
         string[] ids = rows.EnumerateArray()
             .Select(row => row.GetProperty("Id").GetString() ?? string.Empty)
