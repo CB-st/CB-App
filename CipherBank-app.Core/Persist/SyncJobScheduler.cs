@@ -7,15 +7,17 @@ using CipherBank_app.Configuration;
 namespace CipherBank_app.Persist;
 
 /// <inheritdoc />
-public sealed class SyncJobScheduler : ISyncJobScheduler
+public sealed class SyncJobScheduler : ISyncJobScheduler, IDisposable
 {
     private readonly object _gate = new();
     private readonly PriorityQueue<QueuedJob, (int Priority, long Sequence)> _queue = new();
-    private readonly HashSet<string> _queuedKeys = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Task> _activeJobs = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, QueuedJob> _jobs = new(StringComparer.Ordinal);
     private readonly TaskFactory _taskFactory;
+    private readonly CancellationTokenSource _shutdown = new();
     private readonly int _maxConcurrency;
     private long _sequence;
+    private int _running;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SyncJobScheduler"/> class over
@@ -45,46 +47,70 @@ public sealed class SyncJobScheduler : ISyncJobScheduler
     }
 
     /// <inheritdoc />
-    public void Enqueue(string key, SyncPriority priority, Func<CancellationToken, Task> work)
+    public Task EnqueueAsync(
+        string key,
+        SyncPriority priority,
+        Func<CancellationToken, Task> work,
+        CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(work);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         lock (_gate)
         {
-            if (_activeJobs.ContainsKey(key) || _queuedKeys.Contains(key))
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_jobs.TryGetValue(key, out QueuedJob? existing))
             {
-                return;
+                return existing.Completion.Task;
             }
 
-            _queue.Enqueue(new QueuedJob(key, work), ((int)priority, ++_sequence));
-            _queuedKeys.Add(key);
+            CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                ct,
+                _shutdown.Token);
+            QueuedJob job = new QueuedJob(key, work, cancellation);
+            _jobs.Add(key, job);
+            _queue.Enqueue(job, ((int)priority, ++_sequence));
             DispatchEligibleLocked();
+            return job.Completion.Task;
         }
     }
 
-    /// <summary>
-    /// Waits until the factory has no running or queued jobs, via <see cref="Task.WhenAll(Task[])"/>
-    /// over the tracked job tasks. Not part of <see cref="ISyncJobScheduler"/> — tests and shutdown
-    /// paths hold the concrete type.
-    /// Use: Low (tests / shutdown). Scope: SyncJobScheduler instance.
-    /// </summary>
-    public async Task DrainAsync(CancellationToken ct)
+    /// <inheritdoc />
+    public async Task DrainAsync(CancellationToken ct = default)
     {
         while (true)
         {
-            Task[] active;
+            Task[] jobs;
             lock (_gate)
             {
-                if (_activeJobs.Count == 0 && _queue.Count == 0)
+                if (_jobs.Count == 0)
                 {
                     return;
                 }
 
-                active = [.. _activeJobs.Values];
+                jobs = _jobs.Values.Select(job => job.Completion.Task).ToArray();
             }
 
-            await Task.WhenAll(active).WaitAsync(ct).ConfigureAwait(false);
+            await Task.WhenAll(jobs).WaitAsync(ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Cancels queued and running jobs during container shutdown.
+    /// Use: Low (container shutdown). Scope: process-wide scheduler.
+    /// </summary>
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _shutdown.Cancel();
         }
     }
 
@@ -95,66 +121,53 @@ public sealed class SyncJobScheduler : ISyncJobScheduler
     /// </summary>
     private void DispatchEligibleLocked()
     {
-        while (_activeJobs.Count < _maxConcurrency && _queue.Count > 0)
+        while (_running < _maxConcurrency && _queue.Count > 0)
         {
             QueuedJob job = _queue.Dequeue();
-            _queuedKeys.Remove(job.Key);
-
-            Task run = _taskFactory.StartNew(job.InvokeAsync).Unwrap();
-
-            // Continuation is queued (not synchronous) so completion cannot re-enter the
-            // gate held by this dispatch loop; the tracked task completes only after the
-            // key is released, which keeps DrainAsync honest.
-            Task tracked = run.ContinueWith(
-                _ => OnJobCompleted(job.Key),
-                CancellationToken.None,
-                TaskContinuationOptions.None,
-                TaskScheduler.Default);
-            _activeJobs[job.Key] = tracked;
+            _running++;
+            _ = _taskFactory.StartNew(() => RunJobAsync(job)).Unwrap();
         }
     }
 
     /// <summary>
-    /// Releases a completed job's key and dispatches the next eligible work.
-    /// Use: High (per job). Scope: SyncJobScheduler instance.
+    /// Completes one observable job and releases its deduplication key.
+    /// Use: High (per job). Scope: SyncJobScheduler dispatch.
     /// </summary>
-    private void OnJobCompleted(string key)
+    private async Task RunJobAsync(QueuedJob job)
     {
-        lock (_gate)
+        try
         {
-            _activeJobs.Remove(key);
-            DispatchEligibleLocked();
+            job.Cancellation.Token.ThrowIfCancellationRequested();
+            await job.Work(job.Cancellation.Token).ConfigureAwait(false);
+            job.Completion.TrySetResult();
+        }
+        catch (OperationCanceledException) when (job.Cancellation.IsCancellationRequested)
+        {
+            job.Completion.TrySetCanceled(job.Cancellation.Token);
+        }
+        catch (Exception exception)
+        {
+            job.Completion.TrySetException(exception);
+        }
+        finally
+        {
+            lock (_gate)
+            {
+                _jobs.Remove(job.Key);
+                _running--;
+                DispatchEligibleLocked();
+            }
+
+            job.Cancellation.Dispose();
         }
     }
 
-    private sealed record QueuedJob(string Key, Func<CancellationToken, Task> Work)
+    private sealed record QueuedJob(
+        string Key,
+        Func<CancellationToken, Task> Work,
+        CancellationTokenSource Cancellation)
     {
-        /// <summary>
-        /// Runs the job body; jobs own their errors, so expected failure shapes are observed here.
-        /// Use: High (per job). Scope: SyncJobScheduler dispatch.
-        /// </summary>
-        public async Task InvokeAsync()
-        {
-            try
-            {
-                await Work(CancellationToken.None).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                // Jobs own their errors.
-            }
-            catch (ObjectDisposedException)
-            {
-                // Jobs own their errors.
-            }
-            catch (InvalidOperationException)
-            {
-                // Jobs own their errors.
-            }
-            catch (IOException)
-            {
-                // Jobs own their errors.
-            }
-        }
+        internal TaskCompletionSource Completion { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 }

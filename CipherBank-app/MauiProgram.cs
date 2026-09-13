@@ -3,11 +3,13 @@
 // </copyright>
 
 using System.Globalization;
+using CipherBank_app.Configuration;
 using CipherBank_app.Extensions;
 using CipherBank_app.Services;
 using CipherBank_app.Services.Mocks;
 using CipherBank_app.ViewModels;
 using CipherBank_app.Views;
+using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Events;
 
@@ -19,7 +21,23 @@ namespace CipherBank_app;
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
-        => MauiApp.CreateBuilder()
+    {
+#if DEBUG
+        const bool IsDevelopment = true;
+#else
+        const bool IsDevelopment = false;
+#endif
+#if WINDOWS
+        const bool IsWindows = true;
+#else
+        const bool IsWindows = false;
+#endif
+        MauiAppBuilder builder = MauiApp.CreateBuilder();
+        builder.Configuration.AddConfiguration(CipherBankDefaultsConfiguration.BuildForHost(
+            IsDevelopment,
+            IsWindows));
+
+        return builder
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
@@ -43,6 +61,7 @@ public static class MauiProgram
             .RegisterViewModels()
             .RegisterViews()
             .Build();
+    }
 
     /// <summary>
     /// Configures comprehensive logging with Serilog.
@@ -97,6 +116,10 @@ public static class MauiProgram
     /// </summary>
     public static MauiAppBuilder RegisterServices(this MauiAppBuilder mauiAppBuilder)
     {
+        mauiAppBuilder.Services.AddPersistenceFeature(
+            mauiAppBuilder.Configuration,
+            new DirectoryInfo(FileSystem.Current.AppDataDirectory));
+
         // Settings Service (singleton - needed first for other service configuration)
         mauiAppBuilder.Services.AddSingleton<ISettingsService, SettingsService>();
 

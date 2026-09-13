@@ -37,7 +37,8 @@ internal static class CipherBankCoreServiceRegistration
         services.AddSingleton<IMarketRepository, MarketRepository>();
         services.AddSingleton<IPrefsStore, PrefsStore>();
         services.AddSingleton<IRatesCache, RatesCache>();
-        services.AddSingleton<IRecipientRepository>(provider => new RecipientRepository(
+        services.AddSingleton<IRecipientRepository, RecipientRepository>();
+        services.AddSingleton<IRecipientSeedInitializer>(provider => new RecipientSeedInitializer(
             provider.GetRequiredService<ILocalDb>(),
             provider.GetRequiredService<IOptions<PersistenceOptions>>().Value,
             provider.GetRequiredService<TimeProvider>()));
