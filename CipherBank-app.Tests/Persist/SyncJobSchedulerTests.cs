@@ -235,6 +235,16 @@ public class SyncJobSchedulerTests
     }
 
     [Fact]
+    public void Enqueue_AfterDispose_Throws()
+    {
+        SyncJobScheduler queue = new SyncJobScheduler();
+        queue.Dispose();
+
+        Action enqueue = () => queue.EnqueueAsync("late", SyncPriority.P1, _ => Task.CompletedTask);
+        enqueue.Should().Throw<ObjectDisposedException>();
+    }
+
+    [Fact]
     public void Unset_max_concurrency_resolves_to_half_processor_count()
     {
         SyncSchedulerOptions options = new SyncSchedulerOptions();
