@@ -7,6 +7,10 @@ namespace CipherBank_app.Configuration;
 /// <summary>Settings for the on-device EF Core database.</summary>
 public sealed class PersistenceOptions
 {
+    private const int AccountNumberMinLength = 4;
+    private const int RoutingNumberLength = 9;
+    private const int MemoMaxLength = 140;
+
     public static string SectionName { get; } = "Persistence";
 
     public string DatabaseName { get; set; } = "cipherbank.db";
@@ -52,20 +56,40 @@ public sealed class PersistenceOptions
     }
 
     private static bool IsRecipientValid(DefaultRecipientOptions row)
+    {
+        if (!HasRecipientIdentity(row) || !HasBankIdentity(row))
+        {
+            return false;
+        }
+
+        if (!IsRoutingValid(row.Routing) || !IsAccountValid(row.Account))
+        {
+            return false;
+        }
+
+        return IsAccountTypeValid(row.AccountType)
+            && (row.Memo is null || row.Memo.Length <= MemoMaxLength);
+    }
+
+    private static bool HasRecipientIdentity(DefaultRecipientOptions row)
         => !string.IsNullOrWhiteSpace(row.Id)
-            && !string.IsNullOrWhiteSpace(row.Name)
-            && !string.IsNullOrWhiteSpace(row.Holder)
-            && !string.IsNullOrWhiteSpace(row.Bank)
-            && IsRoutingValid(row.Routing)
-            && !string.IsNullOrWhiteSpace(row.Account)
-            && row.Account.Trim().Length >= 4
-            && (string.Equals(row.AccountType, "checking", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(row.AccountType, "savings", StringComparison.OrdinalIgnoreCase))
-            && (row.Memo is null || row.Memo.Length <= 140);
+            && !string.IsNullOrWhiteSpace(row.Name);
+
+    private static bool HasBankIdentity(DefaultRecipientOptions row)
+        => !string.IsNullOrWhiteSpace(row.Holder)
+            && !string.IsNullOrWhiteSpace(row.Bank);
+
+    private static bool IsAccountValid(string? account)
+        => !string.IsNullOrWhiteSpace(account)
+            && account.Trim().Length >= AccountNumberMinLength;
+
+    private static bool IsAccountTypeValid(string accountType)
+        => string.Equals(accountType, "checking", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(accountType, "savings", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsRoutingValid(string? routing)
         => routing is not null
-            && routing.Length == 9
+            && routing.Length == RoutingNumberLength
             && routing.All(static character => character is >= '0' and <= '9');
 
     private bool IsDatabaseNameValid()
