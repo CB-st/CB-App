@@ -61,4 +61,28 @@ public sealed class NoViewModelPlatformGlobalsAnalyzerTests
 
         await test.RunAsync();
     }
+
+    [Fact]
+    public async Task IgnoresCancellableTaskDelayFromViewModel()
+    {
+        CSharpAnalyzerTest<NoViewModelPlatformGlobalsAnalyzer, DefaultVerifier> test = new()
+        {
+            CompilerDiagnostics = CompilerDiagnostics.None,
+            TestState =
+            {
+                Sources =
+                {
+                    ("CipherBank-app/ViewModels/TimerViewModel.cs", """
+                        class TimerViewModel
+                        {
+                            object Tick(System.Threading.CancellationToken token)
+                                => Task.Delay(1000, token);
+                        }
+                        """),
+                },
+            },
+        };
+
+        await test.RunAsync();
+    }
 }
