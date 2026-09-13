@@ -14,7 +14,9 @@ override CI Sonar: new issues on Persist code still fail the gate.
   so desktop SQLite native libraries load. Do not hand-edit `*Designer.cs` or
   `ModelSnapshot`. The `Up`/`Down` class may be edited to satisfy Sonar
   (default arguments, method length, file-scoped namespace) without changing
-  the schema.
+  the schema. Strip the scaffolder's `#nullable disable` directive from every
+  freshly generated migration file and fix any resulting warnings in code,
+  never by suppression (a live-tree analyzer fact enforces this).
 - Prototype SQLite files without `__EFMigrationsHistory` are disposable and
   deleted on initialize. Do not add compatibility SQL to preserve lab leftovers.
 - Database entities and mappings use the on-device table/column names.
@@ -31,8 +33,8 @@ override CI Sonar: new issues on Persist code still fail the gate.
 - SQLite has no datetime affinity. `CreatedAt` converters store ISO-8601 (`O`)
   and parse invariant. Do not change the converter to a different format.
 - `LocalDb` is constructed from `FileInfo`. `ILocalDb.Path` stays `string`
-  (`FullName` after `GetFullPath`) for SQLite `DataSource` and Shell.
-  `ILocalDb.DatabaseFile` exposes the `FileInfo`.
+  (`FullName` after `GetFullPath`) for SQLite `DataSource` and Shell; it is
+  the single identity member (`DatabaseFile` was removed as consumer-free).
 - Optional development payees bind from `PersistenceOptions.DefaultRecipients`
   (stable JSON ids such as `seed:rent-4th-st`). Production defaults seed
   nothing. `RecipientSeedInitializer` owns first-run bootstrap; repositories
