@@ -73,7 +73,8 @@ public static class CipherBankDiagnostics
         "Platform global '{0}' is not allowed in a ViewModel; inject a focused port",
         Category,
         DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        customTags: WellKnownDiagnosticTags.CompilationEnd);
 
     /// <summary>Gets the analyzer diagnostic category.</summary>
     public static string Category => "CipherBank.Structure";
