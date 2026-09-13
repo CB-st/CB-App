@@ -8,8 +8,8 @@ namespace CipherBank_app.Persist;
 /// Role seam for cancelable keyed insert-or-replace writes. Identity and sanitation
 /// invariants are documented on the composing port.
 /// </summary>
-/// <typeparam name="TRow">Immutable row type accepted from consumers.</typeparam>
-public interface IUpsert<TRow>
+/// <typeparam name="TRow">Immutable row type accepted from consumers (contravariant).</typeparam>
+public interface IUpsert<in TRow>
 {
     /// <summary>
     /// Inserts or replaces a row by its stable id.
