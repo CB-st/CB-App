@@ -5,9 +5,10 @@
 namespace CipherBank_app.Persist;
 
 /// <summary>
-/// Named, deduplicating task factory for market persist work (P1 chart / P2 cold bootstrap).
+/// Named, deduplicating task factory for market persist work (Interactive chart persist /
+/// Background cold bootstrap).
 /// Jobs dispatch through an injected <see cref="TaskScheduler"/> via <see cref="TaskFactory"/>;
-/// waiting work is ordered P1-before-P2 (FIFO within a rank) and the whole async job — not just
+/// waiting work is ordered Interactive-before-Background (FIFO within a lane) and the whole async job — not just
 /// its first synchronous segment — counts against the mobile concurrency cap. The whole-job cap
 /// and the keyed skip-duplicate contract are factory policy: a <see cref="TaskScheduler"/>
 /// subclass caps only synchronous task segments (an async job frees its scheduler slot at the

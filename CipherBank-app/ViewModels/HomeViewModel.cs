@@ -544,7 +544,7 @@ public partial class HomeViewModel : ObservableObject
                 string symbol = symbols[i];
                 await _syncJobScheduler.EnqueueAsync(
                     $"p1-ohlc-{symbol.ToUpperInvariant()}",
-                    SyncPriority.P1,
+                    SyncPriority.Interactive,
                     ct => _marketRepository.UpsertOhlcAsync(symbol, ohlc, ct));
                 var chartPts = pts.Select(p => new ChartPoint(p.T, p.V)).ToList();
                 if (i == 0)
@@ -601,7 +601,7 @@ public partial class HomeViewModel : ObservableObject
 
         return _syncJobScheduler.EnqueueAsync(
             "p2-rates",
-            SyncPriority.P2,
+            SyncPriority.Background,
             ct => _marketRateHydrator.HydrateAndRefreshAsync(heldEnabledSymbols, ct));
     }
 

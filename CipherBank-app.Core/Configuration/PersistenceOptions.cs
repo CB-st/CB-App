@@ -5,7 +5,7 @@
 namespace CipherBank_app.Configuration;
 
 /// <summary>Settings for the on-device EF Core database.</summary>
-public sealed class PersistenceOptions
+public sealed class PersistenceOptions : IOptionsSection
 {
     private const int AccountNumberMinLength = 4;
     private const int RoutingNumberLength = 9;
