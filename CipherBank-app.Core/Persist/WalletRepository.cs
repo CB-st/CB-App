@@ -17,9 +17,9 @@ public sealed class WalletRepository : IWalletRepository
         _db = db;
     }
 
-    public async Task<IReadOnlyList<LocalWalletRow>> ListAsync()
+    public async Task<IReadOnlyList<LocalWalletRow>> ListAsync(CancellationToken ct = default)
     {
-        CipherBankDbContext context = await _db.CreateContextAsync().ConfigureAwait(false);
+        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
         {
             return await context.Wallets
@@ -34,40 +34,40 @@ public sealed class WalletRepository : IWalletRepository
                     entity.AccountIndex,
                     entity.Kind,
                     entity.CreatedAt))
-                .ToListAsync()
+                .ToListAsync(ct)
                 .ConfigureAwait(false);
         }
     }
 
-    public Task UpsertAsync(LocalWalletRow row)
+    public Task UpsertAsync(LocalWalletRow row, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(row);
-        return UpsertCoreAsync(row);
+        return UpsertCoreAsync(row, ct);
     }
 
-    public async Task DeleteAsync(string id)
+    public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        CipherBankDbContext context = await _db.CreateContextAsync().ConfigureAwait(false);
+        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
         {
-            WalletEntity? entity = await context.Wallets.FindAsync(id).ConfigureAwait(false);
+            WalletEntity? entity = await context.Wallets.FindAsync([id], ct).ConfigureAwait(false);
             if (entity is null)
             {
                 return;
             }
 
             context.Wallets.Remove(entity);
-            await context.SaveChangesAsync().ConfigureAwait(false);
+            await context.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }
 
-    private async Task UpsertCoreAsync(LocalWalletRow row)
+    private async Task UpsertCoreAsync(LocalWalletRow row, CancellationToken ct)
     {
-        CipherBankDbContext context = await _db.CreateContextAsync().ConfigureAwait(false);
+        CipherBankDbContext context = await _db.CreateContextAsync(ct).ConfigureAwait(false);
         await using (context)
         {
-            WalletEntity? entity = await context.Wallets.FindAsync(row.Id).ConfigureAwait(false);
+            WalletEntity? entity = await context.Wallets.FindAsync([row.Id], ct).ConfigureAwait(false);
             if (entity is null)
             {
                 entity = new WalletEntity { Id = row.Id, CreatedAt = row.CreatedAt };
@@ -80,7 +80,7 @@ public sealed class WalletRepository : IWalletRepository
             entity.Path = row.Path;
             entity.AccountIndex = row.AccountIndex;
             entity.Kind = row.Kind;
-            await context.SaveChangesAsync().ConfigureAwait(false);
+            await context.SaveChangesAsync(ct).ConfigureAwait(false);
         }
     }
 }

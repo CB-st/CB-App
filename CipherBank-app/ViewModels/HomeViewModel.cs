@@ -29,10 +29,10 @@ public partial class HomeViewModel : ObservableObject
     private readonly IAppSession _session;
     private readonly IStreamHub _streamHub;
     private readonly IStreamService _stream;
-    private readonly IRatesCache _ratesCache;
     private readonly IMarketRepository _marketRepository;
     private readonly ISyncJobScheduler _syncJobScheduler;
-    private readonly IPublicQuoteService _publicQuotes;
+    private readonly MarketRateHydrator _marketRateHydrator;
+    private readonly IUiDispatcher _dispatcher;
     private readonly IReadOnlyList<Color> _seriesColors;
     private readonly Color _holdingsAccent;
     private readonly Color _localAccent;
@@ -55,10 +55,10 @@ public partial class HomeViewModel : ObservableObject
         IAppSession session,
         IStreamHub streamHub,
         IStreamService stream,
-        IRatesCache ratesCache,
         IMarketRepository marketRepository,
         ISyncJobScheduler syncJobScheduler,
-        IPublicQuoteService publicQuotes,
+        MarketRateHydrator marketRateHydrator,
+        IUiDispatcher dispatcher,
         IThemeColorProvider themeColors,
         ICoraLineProvider coraLines)
     {
@@ -70,10 +70,10 @@ public partial class HomeViewModel : ObservableObject
         _session = session;
         _streamHub = streamHub;
         _stream = stream;
-        _ratesCache = ratesCache;
         _marketRepository = marketRepository;
         _syncJobScheduler = syncJobScheduler;
-        _publicQuotes = publicQuotes;
+        _marketRateHydrator = marketRateHydrator;
+        _dispatcher = dispatcher;
         _holdingsAccent = themeColors.GetColor("Success");
         _localAccent = themeColors.GetColor("Gold");
         _seriesColors =
@@ -226,13 +226,13 @@ public partial class HomeViewModel : ObservableObject
 
         _ = _refreshDebounce.DebounceAsync(async () =>
         {
-            if (MainThread.IsMainThread)
+            if (!_dispatcher.IsDispatchRequired)
             {
                 await RefreshPortfolioAsync(soft: true);
             }
             else
             {
-                await MainThread.InvokeOnMainThreadAsync(() => RefreshPortfolioAsync(soft: true));
+                await _dispatcher.DispatchAsync(() => RefreshPortfolioAsync(soft: true));
             }
         });
     }
@@ -306,7 +306,7 @@ public partial class HomeViewModel : ObservableObject
         {
             if (prefs is not null)
             {
-                EnqueueRatesHydrate(prefs);
+                await EnqueueRatesHydrateAsync(prefs);
             }
 
             RefreshOnline();
@@ -542,7 +542,7 @@ public partial class HomeViewModel : ObservableObject
                 var pts = await _api.GetHistoryAsync(symbols[i], SelectedRange);
                 (long T, double V)[] ohlc = pts.Select(point => (point.T, point.V)).ToArray();
                 string symbol = symbols[i];
-                _syncJobScheduler.Enqueue(
+                await _syncJobScheduler.EnqueueAsync(
                     $"p1-ohlc-{symbol.ToUpperInvariant()}",
                     SyncPriority.P1,
                     ct => _marketRepository.UpsertOhlcAsync(symbol, ohlc, ct));
@@ -588,7 +588,7 @@ public partial class HomeViewModel : ObservableObject
         ChartsChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void EnqueueRatesHydrate(UserPrefs prefs)
+    private Task EnqueueRatesHydrateAsync(UserPrefs prefs)
     {
         IReadOnlyList<string> enabled = prefs.EnabledCurrencies.Count > 0
             ? prefs.EnabledCurrencies
@@ -599,14 +599,10 @@ public partial class HomeViewModel : ObservableObject
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        _syncJobScheduler.Enqueue(
+        return _syncJobScheduler.EnqueueAsync(
             "p2-rates",
             SyncPriority.P2,
-            ct => MarketBootstrap.HydrateAndRefreshAsync(
-                _ratesCache,
-                _publicQuotes,
-                heldEnabledSymbols,
-                ct));
+            ct => _marketRateHydrator.HydrateAndRefreshAsync(heldEnabledSymbols, ct));
     }
 
     /// <summary>

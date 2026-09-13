@@ -41,17 +41,17 @@ public class LocalWalletSeederTests
     {
         public List<LocalWalletRow> Rows { get; } = [];
 
-        public Task<IReadOnlyList<LocalWalletRow>> ListAsync()
+        public Task<IReadOnlyList<LocalWalletRow>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<LocalWalletRow>>(Rows);
 
-        public Task UpsertAsync(LocalWalletRow row)
+        public Task UpsertAsync(LocalWalletRow row, CancellationToken ct = default)
         {
             Rows.RemoveAll(r => r.Id == row.Id);
             Rows.Add(row);
             return Task.CompletedTask;
         }
 
-        public Task DeleteAsync(string id)
+        public Task DeleteAsync(string id, CancellationToken ct = default)
         {
             Rows.RemoveAll(r => r.Id == id);
             return Task.CompletedTask;

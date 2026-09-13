@@ -130,6 +130,18 @@ public sealed class PqChannelChallengePassStructure : IChallengePassStructure, I
             "A2 PQ builds must use BuildSessionOpenBodyWithIdentityAsync so identity and channel bind under one _buildGate hold."));
     }
 
+    /// <summary>
+    /// Clears an owned intermediate buffer when allocation reached the current stage.
+    /// Use: High (every challenge build). Scope: A2 structure.
+    /// </summary>
+    private static void Zero(byte[]? buffer)
+    {
+        if (buffer is not null)
+        {
+            CryptographicOperations.ZeroMemory(buffer);
+        }
+    }
+
     private async Task<object> BuildSessionOpenBodyWithIdentityCoreAsync(
         ISealAlgorithm algorithm,
         IChallengeTemplate challengeTemplate,
@@ -183,26 +195,44 @@ public sealed class PqChannelChallengePassStructure : IChallengePassStructure, I
                 $"Channel challenge ALGORITHM '{challenge.Algorithm}' does not match '{HybridMlKemX25519Agreement.ChannelAlgorithmId}'.");
         }
 
-        byte[] ciphertext = WireEncoding.FromWire(challenge.Ciphertext);
-        byte[] plaintext = _channel.Open(ciphertext);
-        ParsedChallenge parsed = challengeTemplate.ParseChallengePlaintext(plaintext);
-
-        if (!parsed.ChallengeId.Equals(challenge.ChallengeId, StringComparison.Ordinal))
+        byte[]? ciphertext = null;
+        byte[]? plaintext = null;
+        byte[]? passPayload = null;
+        byte[]? passCiphertext = null;
+        ParsedChallenge? parsed = null;
+        try
         {
-            throw new InvalidOperationException("Opened challenge id mismatch.");
+            ciphertext = WireEncoding.FromWire(challenge.Ciphertext);
+            plaintext = _channel.Open(ciphertext);
+            parsed = challengeTemplate.ParseChallengePlaintext(plaintext);
+            if (!parsed.ChallengeId.Equals(challenge.ChallengeId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Opened challenge id mismatch.");
+            }
+
+            passPayload = challengeTemplate.BuildPassPayload(parsed);
+            passCiphertext = _channel.Seal(passPayload);
+            return new SessionPassDto
+            {
+                ChallengeId = challenge.ChallengeId,
+                PassCiphertext = WireEncoding.ToWire(passCiphertext),
+                AccountPublicKey = accountPublicKeyWire,
+                ApiKeyId = challenge.ApiKeyId ?? _channel.KeyShareId,
+                Algorithm = _channel.ChannelAlgorithmId,
+            };
         }
-
-        byte[] passPayload = challengeTemplate.BuildPassPayload(parsed);
-        byte[] passCipher = _channel.Seal(passPayload);
-
-        return new SessionPassDto
+        finally
         {
-            ChallengeId = challenge.ChallengeId,
-            PassCiphertext = WireEncoding.ToWire(passCipher),
-            AccountPublicKey = accountPublicKeyWire,
-            ApiKeyId = challenge.ApiKeyId ?? _channel.KeyShareId,
-            Algorithm = _channel.ChannelAlgorithmId,
-        };
+            Zero(ciphertext);
+            Zero(plaintext);
+            Zero(passPayload);
+            Zero(passCiphertext);
+            if (parsed is not null)
+            {
+                Zero(parsed.Nonce);
+                Zero(parsed.RawPlaintext);
+            }
+        }
     }
 
     /// <summary>

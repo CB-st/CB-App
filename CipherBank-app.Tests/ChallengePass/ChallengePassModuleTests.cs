@@ -77,6 +77,28 @@ public sealed class ChallengePassModuleTests
     }
 
     [Fact]
+    public async Task Two_step_structure_MismatchedChallenge_ZeroesOpenedAndParsedBuffers()
+    {
+        TrackingSealAlgorithm algorithm = new TrackingSealAlgorithm();
+        TrackingChallengeTemplate template = new TrackingChallengeTemplate("different-id");
+        TwoStepChallengePassStructure structure = new TwoStepChallengePassStructure(
+            new FixedChallengeClient());
+        AccountKeyPair account = new AccountKeyPair([1], [2]);
+
+        Func<Task> act = () => structure.BuildSessionOpenBodyAsync(
+            algorithm,
+            template,
+            account,
+            "account",
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        algorithm.Opened.Should().OnlyContain(value => value == 0);
+        template.Parsed!.Nonce.Should().OnlyContain(value => value == 0);
+        template.Parsed.RawPlaintext.Should().OnlyContain(value => value == 0);
+    }
+
+    [Fact]
     public void Catalog_swaps_active_suite_slot()
     {
         X25519ChaChaSealAlgorithm algo = new X25519ChaChaSealAlgorithm();
@@ -198,5 +220,69 @@ public sealed class ChallengePassModuleTests
         account.PrivateKey.Should().Equal(originalPrivate);
         Action afterDispose = () => source.RequireUnlockedKeyPair(algo);
         afterDispose.Should().Throw<ObjectDisposedException>();
+    }
+
+    private sealed class FixedChallengeClient : ISessionChallengeClient
+    {
+        public Task<SessionChallengeDto> RequestChallengeAsync(
+            string accountPublicKeyWire,
+            CancellationToken ct)
+            => Task.FromResult(new SessionChallengeDto
+            {
+                ChallengeId = "expected-id",
+                Ciphertext = WireEncoding.ToWire([1]),
+                ApiPublicKey = WireEncoding.ToWire([2]),
+                Algorithm = TrackingSealAlgorithm.Id,
+            });
+    }
+
+    private sealed class TrackingSealAlgorithm : ISealAlgorithm
+    {
+        internal const string Id = "tracking";
+
+        public byte[] Opened { get; } = [1, 2, 3, 4];
+
+        public string AlgorithmId => Id;
+
+        public int PublicKeySize => 1;
+
+        public int PrivateKeySize => 1;
+
+        public AccountKeyPair DeriveKeyPair(ReadOnlySpan<byte> seed32) => new([1], [2]);
+
+        public byte[] Seal(ReadOnlySpan<byte> plaintext, ReadOnlySpan<byte> recipientPublicKey) => [3];
+
+        public byte[] Open(ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> recipientPrivateKey) => Opened;
+    }
+
+    private sealed class TrackingChallengeTemplate : IChallengeTemplate
+    {
+        private readonly string _challengeId;
+
+        public TrackingChallengeTemplate(string challengeId)
+        {
+            _challengeId = challengeId;
+        }
+
+        public ParsedChallenge? Parsed { get; private set; }
+
+        public string TemplateId => "tracking";
+
+        public int MinNonceLength => 1;
+
+        public byte[] BuildChallengePlaintext(ChallengeBindContext context) => [1];
+
+        public ParsedChallenge ParseChallengePlaintext(ReadOnlySpan<byte> plaintext)
+        {
+            Parsed = new ParsedChallenge
+            {
+                ChallengeId = _challengeId,
+                Nonce = [4, 5],
+                RawPlaintext = [6, 7],
+            };
+            return Parsed;
+        }
+
+        public byte[] BuildPassPayload(ParsedChallenge opened) => [8, 9];
     }
 }

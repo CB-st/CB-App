@@ -21,10 +21,10 @@ public sealed class PrefsSyncService : IPrefsSyncService
 
     public async Task PullMergeAsync(CancellationToken ct)
     {
-        UserPrefs local = await _store.LoadAsync().ConfigureAwait(false);
+        UserPrefs local = await _store.LoadAsync(ct).ConfigureAwait(false);
         PrefsWireDto? remote = await _api.GetPrefsAsync(ct).ConfigureAwait(false);
         PrefsMerge.Merge(local, remote);
-        await _store.SaveAsync(local).ConfigureAwait(false);
+        await _store.SaveAsync(local, ct).ConfigureAwait(false);
     }
 
     public Task<bool> SaveAndPushAsync(UserPrefs prefs, CancellationToken ct)
@@ -40,7 +40,7 @@ public sealed class PrefsSyncService : IPrefsSyncService
     private async Task<bool> SaveAndPushCoreAsync(UserPrefs prefs, CancellationToken ct)
     {
         prefs.NormalizeHomeSections();
-        await _store.SaveAsync(prefs).ConfigureAwait(false);
+        await _store.SaveAsync(prefs, ct).ConfigureAwait(false);
         try
         {
             await _api.PutPrefsAsync(PrefsWireDto.FromUserPrefs(prefs), ct).ConfigureAwait(false);

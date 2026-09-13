@@ -19,27 +19,26 @@ public static class CipherBankDefaultsConfiguration
     ];
 
     /// <summary>
+    /// Maps compile-time host facts to the repository overlay order.
+    /// Use: High (MAUI startup). Scope: process configuration.
+    /// </summary>
+    /// <returns>A configuration root owned by the caller.</returns>
+    public static IConfigurationRoot BuildForHost(bool isDevelopment, bool isWindows)
+        => Build(isDevelopment ? "Development" : "Production", isWindows);
+
+    /// <summary>
     /// Builds the default configuration, then optionally merges environment and Windows overlays.
     /// Use: High. Scope: host and test composition of embedded options.
     /// </summary>
-    /// <param name="environment">
-    /// Host environment name. When set, merges <c>appsettings.{environment}.json</c> if that
-    /// embedded resource exists. Unknown names are skipped so Production does not invent a file.
-    /// </param>
-    /// <param name="windowsOverlay">
-    /// When true, merges the Windows overlay after the environment overlay. Android and other
-    /// non-Windows hosts must pass false.
-    /// </param>
-    /// <returns>
-    /// A built configuration root. Caller owns the instance. Missing base resource throws
-    /// <see cref="InvalidOperationException"/>; missing overlays are ignored.
-    /// </returns>
+    /// <param name="environment">Host environment name; unknown overlays are ignored.</param>
+    /// <param name="windowsOverlay">Whether to merge Windows defaults after the environment.</param>
+    /// <returns>A configuration root owned by the caller.</returns>
     public static IConfigurationRoot Build(
         string? environment = null,
         bool windowsOverlay = false)
     {
-        ConfigurationBuilder builder = new ConfigurationBuilder();
         Assembly assembly = typeof(CipherBankDefaultsConfiguration).Assembly;
+        ConfigurationBuilder builder = new ConfigurationBuilder();
         foreach (string resourceName in RequiredResourceNames)
         {
             builder.AddJsonStream(OpenRequiredResource(assembly, resourceName));
@@ -71,11 +70,9 @@ public static class CipherBankDefaultsConfiguration
         string resourceName)
     {
         Stream? stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream is null)
+        if (stream is not null)
         {
-            return;
+            builder.AddJsonStream(stream);
         }
-
-        builder.AddJsonStream(stream);
     }
 }

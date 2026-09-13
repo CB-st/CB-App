@@ -2,6 +2,7 @@
 // Copyright (c) CipherBank. Licensed under the BSD 3-Clause License.
 // </copyright>
 
+using System.Security.Cryptography;
 using CipherBank_app.V1;
 
 namespace CipherBank_app.ChallengePass.Structures;
@@ -46,26 +47,58 @@ public sealed class TwoStepChallengePassStructure : IChallengePassStructure
                 $"Challenge ALGORITHM '{challenge.Algorithm}' does not match active seal '{algorithm.AlgorithmId}'.");
         }
 
-        byte[] ciphertext = WireEncoding.FromWire(challenge.Ciphertext);
-        byte[] plaintext = algorithm.Open(ciphertext, accountKey.PrivateKey);
-        ParsedChallenge parsed = challengeTemplate.ParseChallengePlaintext(plaintext);
-
-        if (!parsed.ChallengeId.Equals(challenge.ChallengeId, StringComparison.Ordinal))
+        byte[]? ciphertext = null;
+        byte[]? plaintext = null;
+        byte[]? passPayload = null;
+        byte[]? apiPublicKey = null;
+        byte[]? passCiphertext = null;
+        ParsedChallenge? parsed = null;
+        try
         {
-            throw new InvalidOperationException("Opened challenge id does not match CHALLENGE_ID.");
+            ciphertext = WireEncoding.FromWire(challenge.Ciphertext);
+            plaintext = algorithm.Open(ciphertext, accountKey.PrivateKey);
+            parsed = challengeTemplate.ParseChallengePlaintext(plaintext);
+            if (!parsed.ChallengeId.Equals(challenge.ChallengeId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Opened challenge id does not match CHALLENGE_ID.");
+            }
+
+            passPayload = challengeTemplate.BuildPassPayload(parsed);
+            apiPublicKey = WireEncoding.FromWire(challenge.ApiPublicKey);
+            passCiphertext = algorithm.Seal(passPayload, apiPublicKey);
+            return new SessionPassDto
+            {
+                ChallengeId = challenge.ChallengeId,
+                PassCiphertext = WireEncoding.ToWire(passCiphertext),
+                AccountPublicKey = accountPublicKeyWire,
+                ApiKeyId = challenge.ApiKeyId,
+                Algorithm = algorithm.AlgorithmId,
+            };
         }
-
-        byte[] passPayload = challengeTemplate.BuildPassPayload(parsed);
-        byte[] apiPk = WireEncoding.FromWire(challenge.ApiPublicKey);
-        byte[] passCipher = algorithm.Seal(passPayload, apiPk);
-
-        return new SessionPassDto
+        finally
         {
-            ChallengeId = challenge.ChallengeId,
-            PassCiphertext = WireEncoding.ToWire(passCipher),
-            AccountPublicKey = accountPublicKeyWire,
-            ApiKeyId = challenge.ApiKeyId,
-            Algorithm = algorithm.AlgorithmId,
-        };
+            Zero(ciphertext);
+            Zero(plaintext);
+            Zero(passPayload);
+            Zero(apiPublicKey);
+            Zero(passCiphertext);
+            if (parsed is not null)
+            {
+                Zero(parsed.Nonce);
+                Zero(parsed.RawPlaintext);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Clears an owned intermediate buffer when allocation reached the current stage.
+    /// Use: High (every challenge build). Scope: A1 structure.
+    /// </summary>
+    private static void Zero(byte[]? buffer)
+    {
+        if (buffer is not null)
+        {
+            CryptographicOperations.ZeroMemory(buffer);
+        }
     }
 }

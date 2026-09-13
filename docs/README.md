@@ -38,6 +38,7 @@ Day-to-day implementer rules (function docs, ownership, complexity, E2E, **Sonar
 | [SONAR_STRUCTURAL_PLAN.md](SONAR_STRUCTURAL_PLAN.md) | Stage 2 SA1402/SA1649 inventory, callers, split targets, execution status |
 | [MAUI_FUNCTION_REF.md](MAUI_FUNCTION_REF.md) | Monolithic INVOKE-style map of MAUI/Core/ChallengePass functions (API.md format) |
 | [architecture.md](architecture.md) | Architecture, data flow, security, HTTP pipeline |
+| [agentic/MODULE_COMPOSITION.md](agentic/MODULE_COMPOSITION.md) | Explicit feature registration and ViewModel/platform boundaries |
 | [style/README.md](style/README.md) | Typography, semantic color, components, layout, and accessibility |
 | [core/README.md](core/README.md) | Core library overview |
 | [core/models.md](core/models.md) | Core models (Wallet, Transaction, CryptoCurrency, etc.) |

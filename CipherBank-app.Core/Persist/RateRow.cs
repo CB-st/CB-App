@@ -9,13 +9,13 @@ namespace CipherBank_app.Persist;
 /// <summary>A cached market rate. <see cref="Symbol"/> normalizes to uppercase at construction.</summary>
 public sealed record RateRow(string Symbol, decimal Usd, decimal Change24h, long UpdatedAtMs)
 {
-    private readonly string _symbol = Normalize(Symbol);
+    private readonly string _symbol = NormalizeSymbol(Symbol);
 
     /// <summary>Gets the asset symbol, always uppercase invariant.</summary>
     public string Symbol
     {
         get => _symbol;
-        init => _symbol = Normalize(value);
+        init => _symbol = NormalizeSymbol(value);
     }
 
     /// <summary>Maps a one-unit inverse quote to its persisted USD rate.</summary>
@@ -29,9 +29,14 @@ public sealed record RateRow(string Symbol, decimal Usd, decimal Change24h, long
             updatedAtMs);
     }
 
-    private static string Normalize(string symbol)
+    /// <summary>
+    /// Trims and uppercases a nonblank market symbol.
+    /// Use: High (market cache/query boundary). Scope: Core market persistence.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="symbol"/> is blank.</exception>
+    internal static string NormalizeSymbol(string symbol)
     {
-        ArgumentNullException.ThrowIfNull(symbol);
-        return symbol.ToUpperInvariant();
+        ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
+        return symbol.Trim().ToUpperInvariant();
     }
 }

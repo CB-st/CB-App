@@ -5,6 +5,7 @@
 using CipherBank_app.ChallengePass.Hybrid;
 using CipherBank_app.Constants;
 using CipherBank_app.Session;
+using Microsoft.Extensions.Logging;
 
 namespace CipherBank_app.Services;
 
@@ -17,16 +18,22 @@ public sealed class AppIdleLockService
     private readonly IAppSession _session;
     private readonly INavigationService _nav;
     private readonly PqChannelChallengePassStructure _pqStructure;
+    private readonly TaskScheduler _taskScheduler;
+    private readonly ILogger<AppIdleLockService> _logger;
     private IDispatcherTimer? _timer;
 
     public AppIdleLockService(
         IAppSession session,
         INavigationService nav,
-        PqChannelChallengePassStructure pqStructure)
+        PqChannelChallengePassStructure pqStructure,
+        TaskScheduler taskScheduler,
+        ILogger<AppIdleLockService> logger)
     {
         _session = session;
         _nav = nav;
         _pqStructure = pqStructure;
+        _taskScheduler = taskScheduler;
+        _logger = logger;
         _session.Locked += OnLocked;
     }
 
@@ -56,14 +63,20 @@ public sealed class AppIdleLockService
     /// </summary>
     public void Touch() => _session.Touch();
 
-    private void OnLocked(object? sender, EventArgs e)
+    private async void OnLocked(object? sender, EventArgs e)
     {
-        // Navigate to Unlock first so the UI never waits on ClearDeviceIdentity
-        // (A2 build gate / network). Wipe device identity on a worker afterward.
-        MainThread.BeginInvokeOnMainThread(async () =>
+        try
         {
             await _nav.GoToAsync(Routes.Unlock);
-        });
-        _ = Task.Run(_pqStructure.ClearDeviceIdentity);
+            await Task.Factory.StartNew(
+                _pqStructure.ClearDeviceIdentity,
+                CancellationToken.None,
+                TaskCreationOptions.DenyChildAttach,
+                _taskScheduler).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Custody lock cleanup failed.");
+        }
     }
 }

@@ -24,6 +24,7 @@ public partial class ConvertViewModel : ObservableObject, IDisposable
     private readonly IAppSession _session;
     private readonly IStepUpAuth _stepUp;
     private readonly IStreamHub _streamHub;
+    private readonly IUiDispatcher _dispatcher;
     private QuoteDto? _lockedQuote;
     private CancellationTokenSource? _tickCts;
     private bool _streamHooked;
@@ -39,6 +40,7 @@ public partial class ConvertViewModel : ObservableObject, IDisposable
         IStepUpAuth stepUp,
         IStreamHub streamHub,
         TimeProvider timeProvider,
+        IUiDispatcher dispatcher,
         ICoraLineProvider coraLines)
     {
         _timeProvider = timeProvider;
@@ -48,6 +50,7 @@ public partial class ConvertViewModel : ObservableObject, IDisposable
         _session = session;
         _stepUp = stepUp;
         _streamHub = streamHub;
+        _dispatcher = dispatcher;
         CoraLine = coraLines.GetLine("convert");
         foreach (string symbol in FallbackAssets())
         {
@@ -121,13 +124,13 @@ public partial class ConvertViewModel : ObservableObject, IDisposable
                 _assetsLoaded = true;
             }
 
-            if (MainThread.IsMainThread)
+            if (!_dispatcher.IsDispatchRequired)
             {
                 Apply();
             }
             else
             {
-                await MainThread.InvokeOnMainThreadAsync(Apply);
+                await _dispatcher.DispatchAsync(Apply);
             }
         }
         catch
@@ -147,13 +150,13 @@ public partial class ConvertViewModel : ObservableObject, IDisposable
 
             var quote = await _publicQuotes.GetInverseQuoteAsync(FromAsset, amt, ToAsset);
             string label = $"1 {quote.InputCurrency} ≈ {FormatRate(quote.Rate)} {quote.OutputCurrency} (live)";
-            if (MainThread.IsMainThread)
+            if (!_dispatcher.IsDispatchRequired)
             {
                 RateText = label;
             }
             else
             {
-                await MainThread.InvokeOnMainThreadAsync(() => RateText = label);
+                await _dispatcher.DispatchAsync(() => RateText = label);
             }
         }
         catch
@@ -345,13 +348,13 @@ public partial class ConvertViewModel : ObservableObject, IDisposable
             while (!ct.IsCancellationRequested)
             {
                 await Task.Delay(1000, ct).ConfigureAwait(false);
-                if (MainThread.IsMainThread)
+                if (!_dispatcher.IsDispatchRequired)
                 {
                     TickOnce();
                 }
                 else
                 {
-                    await MainThread.InvokeOnMainThreadAsync(TickOnce);
+                    await _dispatcher.DispatchAsync(TickOnce);
                 }
 
                 if (!HasValidLock)
