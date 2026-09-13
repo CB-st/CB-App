@@ -14,14 +14,21 @@ public interface ILocalDb
     FileInfo DatabaseFile { get; }
 
     /// <summary>
-    /// Applies pending EF migrations on first open, honoring <paramref name="ct"/>.
+    /// Applies pending EF migrations on first open without caller cancellation.
     /// Use: High (app start / first persist call). Scope: ILocalDb consumers.
     /// </summary>
-    Task InitializeAsync(CancellationToken ct = default);
+    Task InitializeAsync() => InitializeAsync(CancellationToken.None);
+
+    /// <summary>Applies pending EF migrations on first open, honoring <paramref name="ct"/>.</summary>
+    Task InitializeAsync(CancellationToken ct);
 
     /// <summary>
-    /// Opens an EF context, honoring <paramref name="ct"/>. The caller owns the returned value and must dispose it.
+    /// Opens an EF context without caller cancellation. The caller owns and disposes it.
     /// Use: High (every repository call). Scope: ILocalDb consumers.
     /// </summary>
-    ValueTask<CipherBankDbContext> CreateContextAsync(CancellationToken ct = default);
+    ValueTask<CipherBankDbContext> CreateContextAsync()
+        => CreateContextAsync(CancellationToken.None);
+
+    /// <summary>Opens an EF context, honoring <paramref name="ct"/>; the caller owns and disposes it.</summary>
+    ValueTask<CipherBankDbContext> CreateContextAsync(CancellationToken ct);
 }

@@ -88,19 +88,22 @@ public sealed class RatesCache : IRatesCache, IDisposable
 
                 foreach (RateRow row in normalized)
                 {
-                    if (!existing.TryGetValue(row.Symbol, out RateSnapshotEntity? entity))
-                    {
-                        entity = new RateSnapshotEntity { Symbol = row.Symbol };
-                        context.RateSnapshots.Add(entity);
-                    }
-                    else if (row.UpdatedAtMs < entity.UpdatedAtMs)
+                    bool found = existing.TryGetValue(row.Symbol, out RateSnapshotEntity? entity);
+                    if (found && row.UpdatedAtMs < entity!.UpdatedAtMs)
                     {
                         continue;
                     }
 
-                    entity.Usd = row.Usd;
-                    entity.Change24H = row.Change24h;
-                    entity.UpdatedAtMs = row.UpdatedAtMs;
+                    if (!found)
+                    {
+                        entity = new RateSnapshotEntity { Symbol = row.Symbol };
+                        context.RateSnapshots.Add(entity);
+                    }
+
+                    RateSnapshotEntity target = entity!;
+                    target.Usd = row.Usd;
+                    target.Change24H = row.Change24h;
+                    target.UpdatedAtMs = row.UpdatedAtMs;
                 }
 
                 await context.SaveChangesAsync(ct).ConfigureAwait(false);
