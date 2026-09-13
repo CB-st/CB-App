@@ -37,6 +37,76 @@ public class AchRecipientValidationTests
             UserFacingStrings.AchMemoMustBeMaxLength(AchRecipientValidation.MemoMaxLength));
     }
 
+    /// <summary>
+    /// The detailed variant carries the failing field with each message so consumers can
+    /// attach errors to their inputs; order and messages match <c>ValidateAll</c>.
+    /// Use: Medium (structured-error contract regression). Scope: AchRecipientValidation.
+    /// </summary>
+    [Fact]
+    public void ValidateDetailed_ReportsFieldAndMessageForEveryFailure()
+    {
+        IReadOnlyList<AchValidationError> errors = AchRecipientValidation.ValidateDetailed(
+            " ",
+            " ",
+            "Demo Bank",
+            "02100",
+            "12",
+            "moneymarket",
+            new string('x', AchRecipientValidation.MemoMaxLength + 1));
+
+        errors.Select(static e => e.Field).Should().Equal(
+            AchRecipientField.Name,
+            AchRecipientField.Holder,
+            AchRecipientField.Routing,
+            AchRecipientField.Account,
+            AchRecipientField.AccountType,
+            AchRecipientField.Memo);
+        errors.Select(static e => e.Message).Should().Equal(
+            UserFacingStrings.AchEnterPayeeName,
+            UserFacingStrings.AchEnterAccountHolderName,
+            UserFacingStrings.AchRoutingNumberMustBeDigits(AchRecipientValidation.RoutingNumberDigitCount),
+            UserFacingStrings.AchEnterValidAccountNumber,
+            UserFacingStrings.AchAccountTypeMustBeCheckingOrSavings,
+            UserFacingStrings.AchMemoMustBeMaxLength(AchRecipientValidation.MemoMaxLength));
+    }
+
+    [Fact]
+    public void ValidateDetailed_ValidInput_ReturnsEmpty()
+    {
+        AchRecipientValidation.ValidateDetailed(
+            "Rent LLC",
+            "Jane Doe",
+            "Demo Bank",
+            "021000021",
+            "12345678",
+            "checking",
+            "April rent").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateAll_MatchesDetailedMessages()
+    {
+        IReadOnlyList<string> all = AchRecipientValidation.ValidateAll(
+            " ",
+            "Jane Doe",
+            "Demo Bank",
+            "02100",
+            "12",
+            "checking",
+            null);
+
+        IReadOnlyList<AchValidationError> detailed = AchRecipientValidation.ValidateDetailed(
+            " ",
+            "Jane Doe",
+            "Demo Bank",
+            "02100",
+            "12",
+            "checking",
+            null);
+
+        all.Should().Equal(detailed.Select(static e => e.Message));
+    }
+
     [Fact]
     public void ValidateAll_ValidInput_ReturnsEmpty()
     {
